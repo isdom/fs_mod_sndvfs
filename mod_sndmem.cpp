@@ -504,7 +504,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	sf_command(NULL, SFC_GET_FORMAT_SUBTYPE_COUNT, &subtype_count, sizeof(int));
 
 	//sfinfo.channels = 1;
-	len = ((major_count + (exlen + 2)) * sizeof(char *));
+	len = ((major_count + (exlen + 2) + 1) * sizeof(char *));
 	supported_formats = (char **)switch_core_alloc(pool, len);
 
 	len = 0;
@@ -582,6 +582,8 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 			supported_formats[len++] = extras[m];
 		}
 	}
+
+    supported_formats[len++] = "mem";
 
 	switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "================================================================================\n");
 

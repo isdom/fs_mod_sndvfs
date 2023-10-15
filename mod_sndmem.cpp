@@ -71,7 +71,7 @@ static void reverse_channel_count(switch_file_handle_t *handle) {
 
 static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const char *path)
 {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "using mod_sndmem\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "using mod_sndmem -- file: %s\n", path);
 
 	sndfile_context *context;
 	int mode = 0;

@@ -14,7 +14,6 @@ FREESWITCH_LIBS=-L/usr/local/freeswitch/lib -lfreeswitch
 FREESWITCH_INCLUDE=-I/usr/local/freeswitch/include/freeswitch
 
 SNDFILE_LIBS=-lsndfile -ldl -D_GLIBCXX_USE_CXX11_ABI=0
-# SNDFILE_INCLUDE=-I/usr/include/apr-1.0
 
 TARGET_SER=mod_sndmem.so
 

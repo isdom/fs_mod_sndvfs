@@ -474,6 +474,13 @@ static switch_bool_t exten_is_allowed(const char *exten) {
 
 static char **supported_formats;
 
+void dump_formats(const char *fmt) {
+    int i;
+    for (i = 0; supported_formats[i]; i++) {
+        switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, fmt, i, supported_formats[i]);
+    }
+}
+
 static switch_status_t setup_formats(switch_memory_pool_t *pool)
 {
 	SF_FORMAT_INFO info;
@@ -577,13 +584,22 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 			 */
 		}
 	}
+
+    dump_formats("step1: [%d] %s\n");
+
 	for (m = 0; m < exlen; m++) {
 		if (exten_is_allowed(extras[m])) {
 			supported_formats[len++] = extras[m];
 		}
 	}
 
+    switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "len before mem: %d\n", len);
+
     supported_formats[len++] = "mem";
+
+    switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "len after mem: %d\n", len);
+
+    dump_formats("step2: [%d] %s\n");
 
 	switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "================================================================================\n");
 
@@ -637,14 +653,9 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load)
 		return SWITCH_STATUS_FALSE;
 	}
 
-    {
-        int i;
-        for (i = 0; supported_formats[i]; i++) {
-            switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "ext: [%d] %s\n", i, supported_formats[i]);
-        }
-    }
+    dump_formats("step3: [%d] %s\n");
 
-	/* connect my internal structure to the blank pointer passed to me */
+    /* connect my internal structure to the blank pointer passed to me */
 	*module_interface = switch_loadable_module_create_module_interface(pool, modname);
 	file_interface = static_cast<switch_file_interface_t *>(switch_loadable_module_create_interface(*module_interface,
                                                                                                     SWITCH_FILE_INTERFACE));

@@ -588,17 +588,15 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
     dump_formats("step1: [%d] %s\n");
     switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "step1 len: %d\n", len);
 
+    supported_formats[len++] = "mem";
+
+    switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "len after mem: %d\n", len);
+
 	for (m = 0; m < exlen; m++) {
 		if (exten_is_allowed(extras[m])) {
 			supported_formats[len++] = extras[m];
 		}
 	}
-
-    switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "len before mem: %d\n", len);
-
-    supported_formats[len++] = "mem";
-
-    switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "len after mem: %d\n", len);
 
     dump_formats("step2: [%d] %s\n");
 

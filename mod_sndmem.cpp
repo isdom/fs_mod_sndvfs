@@ -586,6 +586,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	}
 
     dump_formats("step1: [%d] %s\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "step1 len: %d\n", len);
 
 	for (m = 0; m < exlen; m++) {
 		if (exten_is_allowed(extras[m])) {

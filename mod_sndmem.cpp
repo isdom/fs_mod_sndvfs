@@ -69,6 +69,8 @@ static void reverse_channel_count(switch_file_handle_t *handle) {
 	}
 }
 
+#define MAX_ARGS 10
+
 // mem://{uuid=,bucket=}path
 static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const char *path)
 {
@@ -91,9 +93,39 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 #endif
     const char *lbraces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
-    const char *vars = switch_core_strndup(handle->memory_pool, lbraces + 1, rbraces - lbraces - 1);
+    char *vars = switch_core_strndup(handle->memory_pool, lbraces + 1, rbraces - lbraces - 1);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);
+
+    char *_uuid = nullptr;
+    char *_bucket = nullptr;
+
+    char *argv[MAX_ARGS];
+    memset(argv, 0, sizeof(char *) * MAX_ARGS);
+
+    int argc = switch_split(vars, ',', argv);
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "var:%s, args count: %d\n", vars, argc);
+
+    for (int idx = 1; idx < MAX_ARGS; idx++) {
+        if (argv[idx]) {
+            char *ss[2] = {nullptr, nullptr};
+            int cnt = switch_split(argv[idx], '=', ss);
+            if (cnt == 2) {
+                char *var = ss[0];
+                char *val = ss[1];
+                if (!strcasecmp(var, "uuid")) {
+                    _uuid = val;
+                    continue;
+                }
+                if (!strcasecmp(var, "bucket")) {
+                    _bucket = val;
+                    continue;
+                }
+            }
+        }
+    }
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "uuid: %s, bucket: %s\n", _uuid, _bucket);
 
 	if ((ext = strrchr(path, '.')) == 0) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid Format\n");

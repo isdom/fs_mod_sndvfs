@@ -69,6 +69,7 @@ static void reverse_channel_count(switch_file_handle_t *handle) {
 	}
 }
 
+// mem://{uuid=,bucket=}path
 static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const char *path)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "using mod_sndmem -- file: %s\n", path);
@@ -88,6 +89,11 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 #else
 	char ps = '/';
 #endif
+    const char *lbraces = strchr(path, '{');
+    const char *rbraces = strchr(path, '}');
+    const char *vars = switch_core_strndup(handle->memory_pool, lbraces + 1, rbraces - lbraces - 1);
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);
 
 	if ((ext = strrchr(path, '.')) == 0) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid Format\n");
@@ -340,6 +346,8 @@ static switch_status_t sndfile_perform_open(sndfile_context *context, const char
 			}
 		}
 	}
+
+    // TBD: replace with sf_open_virtual
 	if ((context->handle = sf_open(path, mode, &context->sfinfo)) == 0) {
 		return SWITCH_STATUS_FALSE;
 	}

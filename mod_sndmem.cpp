@@ -106,7 +106,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
     int argc = switch_split(vars, ',', argv);
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "var:%s, args count: %d\n", vars, argc);
 
-    for (int idx = 1; idx < MAX_ARGS; idx++) {
+    for (int idx = 0; idx < MAX_ARGS; idx++) {
         if (argv[idx]) {
             char *ss[2] = {nullptr, nullptr};
             int cnt = switch_split(argv[idx], '=', ss);
@@ -124,6 +124,8 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
             }
         }
     }
+
+    path = rbraces + 1;
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "uuid: %s, bucket: %s\n", _uuid, _bucket);
 

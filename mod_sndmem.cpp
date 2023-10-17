@@ -549,7 +549,8 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 				}
 				switch_core_hash_insert(globals.format_hash, map->uext, map);
 			}
-			supported_formats[len++] = (char *) info.extension;
+            // skip extension for temp isdom
+			// supported_formats[len++] = (char *) info.extension;
 
 			for (i=0; i < add_ext_len; i++) {
 				if (!strcmp(info.extension, add_ext[i].ext)) {
@@ -594,7 +595,8 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 
 	for (m = 0; m < exlen; m++) {
 		if (exten_is_allowed(extras[m])) {
-			supported_formats[len++] = extras[m];
+            // skip extension for temp isdom
+			// supported_formats[len++] = extras[m];
 		}
 	}
 

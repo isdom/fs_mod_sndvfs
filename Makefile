@@ -7,7 +7,7 @@ SER_STRIP=$(SER_CC_PRE)strip
 CLI_STRIP=$(CLI_CC_PRE)strip
 
 
-CFLAGS += -shared -fPIC -O2 -Wall
+CFLAGS += -g -shared -fPIC -O2 -Wall
 SER_SRCS=mod_sndmem.cpp
 
 FREESWITCH_LIBS=-L/usr/local/freeswitch/lib -lfreeswitch

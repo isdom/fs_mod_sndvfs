@@ -71,13 +71,14 @@ struct format_map {
 struct sndfile_context {
 	SF_INFO sfinfo;
 	SNDFILE *handle;
+    void *vfs_data;
+    vfs_func_t *vfs_funcs;
 };
 
 typedef struct sndfile_context sndfile_context;
 
 static switch_status_t
-sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle,
-                     vfs_func_t *vfs_funcs);
+sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle);
 
 static void reverse_channel_count(switch_file_handle_t *handle) {
 	/* for recording stereo conferences and stereo calls in audio file formats that support only 1 channel.
@@ -206,6 +207,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		return SWITCH_STATUS_MEMERR;
 	}
 
+    context->vfs_funcs = vfs_funcs;
 	map = static_cast<format_map *>(switch_core_hash_find(globals.format_hash, ext));
 
 	if (mode & SFM_WRITE) {
@@ -353,7 +355,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		ldup = strdup(last);
 		switch_assert(ldup);
 		switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", handle->samplerate, SWITCH_PATH_SEPARATOR, ldup);
-		if (sndfile_perform_open(context, alt_path, mode, handle, vfs_funcs) == SWITCH_STATUS_SUCCESS) {
+		if (sndfile_perform_open(context, alt_path, mode, handle) == SWITCH_STATUS_SUCCESS) {
 			path = alt_path;
 		} else {
 			/* Try to find the file at the highest rate possible if we can't find one that matches the exact rate.
@@ -361,7 +363,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 			 */
 			for (i = 3; i >= 0; i--) {
 				switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", rates[i], SWITCH_PATH_SEPARATOR, ldup);
-				if (sndfile_perform_open(context, alt_path, mode, handle, vfs_funcs) == SWITCH_STATUS_SUCCESS) {
+				if (sndfile_perform_open(context, alt_path, mode, handle) == SWITCH_STATUS_SUCCESS) {
 					path = alt_path;
 					break;
 				}
@@ -370,7 +372,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	}
 
 	if (!context->handle) {
-		if (sndfile_perform_open(context, path, mode, handle, vfs_funcs) != SWITCH_STATUS_SUCCESS) {
+		if (sndfile_perform_open(context, path, mode, handle) != SWITCH_STATUS_SUCCESS) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error Opening File [%s] [%s]\n", path, sf_strerror(context->handle));
 			status = SWITCH_STATUS_GENERR;
 			goto end;
@@ -417,29 +419,24 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	return status;
 }
 
-typedef struct {
-    void *vfs_data;
-    vfs_func_t *vfs_funcs;
-} vfs_context_t;
-
-sf_count_t vfs_get_filelen(vfs_context_t *vfs_ctx) {
-    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_get_filelen_func(vfs_ctx->vfs_data);
+sf_count_t vfs_get_filelen(sndfile_context *context) {
+    return (sf_count_t)context->vfs_funcs->vfs_get_filelen_func(context->vfs_data);
 }
 
-sf_count_t vfs_seek(sf_count_t offset, int whence, vfs_context_t *vfs_ctx) {
-    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_seek_func(offset, whence, vfs_ctx->vfs_data);
+sf_count_t vfs_seek(sf_count_t offset, int whence, sndfile_context *context) {
+    return (sf_count_t)context->vfs_funcs->vfs_seek_func(offset, whence, context->vfs_data);
 }
 
-sf_count_t vfs_read(void *ptr, sf_count_t count, vfs_context_t *vfs_ctx) {
-    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_read_func(ptr, count, vfs_ctx->vfs_data);
+sf_count_t vfs_read(void *ptr, sf_count_t count, sndfile_context *context) {
+    return (sf_count_t)context->vfs_funcs->vfs_read_func(ptr, count, context->vfs_data);
 }
 
-sf_count_t vfs_write(const void *ptr, sf_count_t count, vfs_context_t *vfs_ctx) {
-    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_write_func(ptr, count, vfs_ctx->vfs_data);
+sf_count_t vfs_write(const void *ptr, sf_count_t count, sndfile_context *context) {
+    return (sf_count_t)context->vfs_funcs->vfs_write_func(ptr, count, context->vfs_data);
 }
 
-sf_count_t vfs_tell(vfs_context_t *vfs_ctx) {
-    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_tell_func(vfs_ctx->vfs_data);
+sf_count_t vfs_tell(sndfile_context *context) {
+    return (sf_count_t)context->vfs_funcs->vfs_tell_func(context->vfs_data);
 }
 
 SF_VIRTUAL_IO _sfvirtual = {
@@ -451,8 +448,7 @@ SF_VIRTUAL_IO _sfvirtual = {
 };
 
 static switch_status_t
-sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle,
-                     vfs_func_t *vfs_funcs) {
+sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle) {
 	if ((mode == SFM_WRITE) || (mode ==  SFM_RDWR)) {
         /*
          * create in memory, no need check and create file first
@@ -471,17 +467,15 @@ sndfile_perform_open(sndfile_context *context, const char *path, int mode, switc
 
     // TBD: replace with sf_open_virtual
 	// if ((context->handle = sf_open(path, mode, &context->sfinfo)) == 0) {
-    void *vfs_data = vfs_funcs->vfs_open_func(path);
-    if (!vfs_data) {
+    context->vfs_data = context->vfs_funcs->vfs_open_func(path);
+    if (!context->vfs_data) {
         return SWITCH_STATUS_FALSE;
     }
-    auto vfs_ctx = (vfs_context_t*) switch_core_alloc(handle->memory_pool, sizeof(vfs_context_t));
-    vfs_ctx->vfs_data = vfs_data;
-    vfs_ctx->vfs_funcs = vfs_funcs;
 
-    if ((context->handle = sf_open_virtual(&_sfvirtual, mode, &context->sfinfo, vfs_ctx)) == 0) {
+    if ((context->handle = sf_open_virtual(&_sfvirtual, mode, &context->sfinfo, context)) == 0) {
         return SWITCH_STATUS_FALSE;
 	}
+
 	return SWITCH_STATUS_SUCCESS;
 }
 
@@ -499,6 +493,7 @@ static switch_status_t sndfile_file_close(switch_file_handle_t *handle)
 
 	if (context) {
 		sf_close(context->handle);
+        context->vfs_funcs->vfs_close_func(context->vfs_data);
 	}
 
 	return SWITCH_STATUS_SUCCESS;

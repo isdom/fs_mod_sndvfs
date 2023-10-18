@@ -36,6 +36,24 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load);
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown);
 SWITCH_MODULE_DEFINITION(mod_sndmem, mod_sndmem_load, mod_sndmem_shutdown, NULL);
 
+typedef void *(*vfs_open_func_t) (const char *path);
+typedef void (*vfs_close_func_t) (void *user_data);
+
+typedef size_t (*vfs_get_filelen_func_t) (void *user_data);
+typedef size_t (*vfs_seek_func_t) (size_t offset, int whence, void *user_data);
+typedef size_t (*vfs_read_func_t) (void *ptr, size_t count, void *user_data);
+typedef size_t (*vfs_write_func_t) (const void *ptr, size_t count, void *user_data);
+typedef size_t (*vfs_tell_func_t) (void *user_data);
+
+typedef struct {
+    vfs_open_func_t vfs_open_func;
+    vfs_close_func_t vfs_close_func;
+    vfs_get_filelen_func_t vfs_get_filelen_func;
+    vfs_seek_func_t vfs_seek_func;
+    vfs_read_func_t vfs_read_func;
+    vfs_write_func_t vfs_write_func;
+    vfs_tell_func_t vfs_tell_func;
+} vfs_func_t;
 
 static struct {
 	switch_hash_t *format_hash;
@@ -57,7 +75,9 @@ struct sndfile_context {
 
 typedef struct sndfile_context sndfile_context;
 
-static switch_status_t sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle);
+static switch_status_t
+sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle,
+                     vfs_func_t *vfs_funcs);
 
 static void reverse_channel_count(switch_file_handle_t *handle) {
 	/* for recording stereo conferences and stereo calls in audio file formats that support only 1 channel.
@@ -71,7 +91,7 @@ static void reverse_channel_count(switch_file_handle_t *handle) {
 
 #define MAX_ARGS 10
 
-// mem://{uuid=,bucket=}path
+// mem://{vfs=,uuid=,bucket=}path
 static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const char *path)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "using mod_sndmem -- file: %s\n", path);
@@ -93,18 +113,28 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 #endif
     const char *lbraces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
+
+    if (!lbraces || !rbraces) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {vfs=?,uuid=?}\n");
+        return SWITCH_STATUS_GENERR;
+    }
+
     char *vars = switch_core_strndup(handle->memory_pool, lbraces + 1, rbraces - lbraces - 1);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);
+    }
 
     char *_uuid = nullptr;
-    char *_bucket = nullptr;
+    char *_vfs = nullptr;
 
     char *argv[MAX_ARGS];
     memset(argv, 0, sizeof(char *) * MAX_ARGS);
 
     int argc = switch_split(vars, ',', argv);
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "var:%s, args count: %d\n", vars, argc);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "var:%s, args count: %d\n", vars, argc);
+    }
 
     for (int idx = 0; idx < MAX_ARGS; idx++) {
         if (argv[idx]) {
@@ -113,21 +143,41 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
             if (cnt == 2) {
                 char *var = ss[0];
                 char *val = ss[1];
+                if (globals.debug) {
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "process arg: %s = %s\n", var, val);
+                }
                 if (!strcasecmp(var, "uuid")) {
                     _uuid = val;
                     continue;
                 }
-                if (!strcasecmp(var, "bucket")) {
-                    _bucket = val;
+                if (!strcasecmp(var, "vfs")) {
+                    _vfs = val;
                     continue;
                 }
             }
         }
     }
 
-    path = rbraces + 1;
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "uuid: %s, vfs: %s\n", _uuid, _vfs);
+    switch_core_session_t *session = switch_core_session_force_locate(_uuid);
+    if (!session) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "invalid uuid %s, can't locate session\n",
+                          _uuid);
+        return SWITCH_STATUS_GENERR;
+    }
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "uuid: %s, bucket: %s\n", _uuid, _bucket);
+    switch_channel_t *channel = switch_core_session_get_channel(session);
+    auto vfs_funcs = (vfs_func_t*)switch_channel_get_private(channel, _vfs);
+
+    // add rwunlock for BUG: un-released channel, ref: https://blog.csdn.net/xxm524/article/details/125821116
+    //  We meet : ... Locked, Waiting on external entities
+    switch_core_session_rwunlock(session);
+
+    if (!vfs_funcs) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "invalid vfs: %s, not attach vfs provider\n",
+                          _vfs);
+        return SWITCH_STATUS_GENERR;
+    }
 
 	if ((ext = strrchr(path, '.')) == 0) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid Format\n");
@@ -303,7 +353,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		ldup = strdup(last);
 		switch_assert(ldup);
 		switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", handle->samplerate, SWITCH_PATH_SEPARATOR, ldup);
-		if (sndfile_perform_open(context, alt_path, mode, handle) == SWITCH_STATUS_SUCCESS) {
+		if (sndfile_perform_open(context, alt_path, mode, handle, vfs_funcs) == SWITCH_STATUS_SUCCESS) {
 			path = alt_path;
 		} else {
 			/* Try to find the file at the highest rate possible if we can't find one that matches the exact rate.
@@ -311,7 +361,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 			 */
 			for (i = 3; i >= 0; i--) {
 				switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", rates[i], SWITCH_PATH_SEPARATOR, ldup);
-				if (sndfile_perform_open(context, alt_path, mode, handle) == SWITCH_STATUS_SUCCESS) {
+				if (sndfile_perform_open(context, alt_path, mode, handle, vfs_funcs) == SWITCH_STATUS_SUCCESS) {
 					path = alt_path;
 					break;
 				}
@@ -320,7 +370,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	}
 
 	if (!context->handle) {
-		if (sndfile_perform_open(context, path, mode, handle) != SWITCH_STATUS_SUCCESS) {
+		if (sndfile_perform_open(context, path, mode, handle, vfs_funcs) != SWITCH_STATUS_SUCCESS) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error Opening File [%s] [%s]\n", path, sf_strerror(context->handle));
 			status = SWITCH_STATUS_GENERR;
 			goto end;
@@ -367,8 +417,45 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	return status;
 }
 
-static switch_status_t sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle) {
+typedef struct {
+    void *vfs_data;
+    vfs_func_t *vfs_funcs;
+} vfs_context_t;
+
+sf_count_t vfs_get_filelen(vfs_context_t *vfs_ctx) {
+    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_get_filelen_func(vfs_ctx->vfs_data);
+}
+
+sf_count_t vfs_seek(sf_count_t offset, int whence, vfs_context_t *vfs_ctx) {
+    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_seek_func(offset, whence, vfs_ctx->vfs_data);
+}
+
+sf_count_t vfs_read(void *ptr, sf_count_t count, vfs_context_t *vfs_ctx) {
+    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_read_func(ptr, count, vfs_ctx->vfs_data);
+}
+
+sf_count_t vfs_write(const void *ptr, sf_count_t count, vfs_context_t *vfs_ctx) {
+    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_write_func(ptr, count, vfs_ctx->vfs_data);
+}
+
+sf_count_t vfs_tell(vfs_context_t *vfs_ctx) {
+    return (sf_count_t)vfs_ctx->vfs_funcs->vfs_tell_func(vfs_ctx->vfs_data);
+}
+
+SF_VIRTUAL_IO _sfvirtual = {
+        reinterpret_cast<sf_vio_get_filelen>(vfs_get_filelen),
+        reinterpret_cast<sf_vio_seek>(vfs_seek),
+        reinterpret_cast<sf_vio_read>(vfs_read),
+        reinterpret_cast<sf_vio_write>(vfs_write),
+        reinterpret_cast<sf_vio_tell>(vfs_tell)
+};
+
+static switch_status_t
+sndfile_perform_open(sndfile_context *context, const char *path, int mode, switch_file_handle_t *handle,
+                     vfs_func_t *vfs_funcs) {
 	if ((mode == SFM_WRITE) || (mode ==  SFM_RDWR)) {
+        /*
+         * create in memory, no need check and create file first
 		if (switch_file_exists(path, handle->memory_pool) != SWITCH_STATUS_SUCCESS) {
 			switch_file_t *newfile;
 			unsigned int flags = SWITCH_FOPEN_WRITE | SWITCH_FOPEN_CREATE;
@@ -379,11 +466,21 @@ static switch_status_t sndfile_perform_open(sndfile_context *context, const char
 				return SWITCH_STATUS_FALSE;
 			}
 		}
+         */
 	}
 
     // TBD: replace with sf_open_virtual
-	if ((context->handle = sf_open(path, mode, &context->sfinfo)) == 0) {
-		return SWITCH_STATUS_FALSE;
+	// if ((context->handle = sf_open(path, mode, &context->sfinfo)) == 0) {
+    void *vfs_data = vfs_funcs->vfs_open_func(path);
+    if (!vfs_data) {
+        return SWITCH_STATUS_FALSE;
+    }
+    auto vfs_ctx = (vfs_context_t*) switch_core_alloc(handle->memory_pool, sizeof(vfs_context_t));
+    vfs_ctx->vfs_data = vfs_data;
+    vfs_ctx->vfs_funcs = vfs_funcs;
+
+    if ((context->handle = sf_open_virtual(&_sfvirtual, mode, &context->sfinfo, vfs_ctx)) == 0) {
+        return SWITCH_STATUS_FALSE;
 	}
 	return SWITCH_STATUS_SUCCESS;
 }

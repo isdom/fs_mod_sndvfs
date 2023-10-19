@@ -334,6 +334,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		return SWITCH_STATUS_GENERR;
 	}
 
+#if 0 // TODO: disable add the sample rate to the path feature : isdom 20231019
 	alt_len = strlen(path) + 10;
 	// switch_zmalloc(alt_path, alt_len);
     alt_path = (char*)calloc(1, alt_len);
@@ -370,6 +371,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 			}
 		}
 	}
+#endif
 
 	if (!context->handle) {
 		if (sndfile_perform_open(context, path, mode, handle) != SWITCH_STATUS_SUCCESS) {

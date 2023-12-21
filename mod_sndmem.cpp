@@ -100,9 +100,9 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	sndfile_context *context;
 	int mode = 0;
 	const char *ext;
-	struct format_map *map = NULL;
+	struct format_map *map = nullptr;
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
-	char *alt_path = NULL, *last, *ldup = NULL;
+	char *alt_path = nullptr, *last, *ldup = nullptr;
 	size_t alt_len = 0;
 	int rates[4] = { 8000, 16000, 32000, 48000 };
 	int i;
@@ -529,20 +529,20 @@ static switch_status_t sndfile_file_read(switch_file_handle_t *handle, void *dat
 	sndfile_context *context = (sndfile_context *)handle->private_info;
 
 	if (switch_test_flag(handle, SWITCH_FILE_DATA_RAW)) {
-		*len = (size_t) sf_read_raw(context->handle, data, inlen);
+		*len = (size_t) sf_read_raw(context->handle, data, (sf_count_t)inlen);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_INT)) {
-		*len = (size_t) sf_readf_int(context->handle, (int *) data, inlen);
+		*len = (size_t) sf_readf_int(context->handle, (int *) data, (sf_count_t)inlen);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_SHORT)) {
-		*len = (size_t) sf_readf_short(context->handle, (short *) data, inlen);
+		*len = (size_t) sf_readf_short(context->handle, (short *) data, (sf_count_t)inlen);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_FLOAT)) {
-		*len = (size_t) sf_readf_float(context->handle, (float *) data, inlen);
+		*len = (size_t) sf_readf_float(context->handle, (float *) data, (sf_count_t)inlen);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_DOUBLE)) {
-		*len = (size_t) sf_readf_double(context->handle, (double *) data, inlen);
+		*len = (size_t) sf_readf_double(context->handle, (double *) data, (sf_count_t)inlen);
 	} else {
-		*len = (size_t) sf_readf_int(context->handle, (int *) data, inlen);
+		*len = (size_t) sf_readf_int(context->handle, (int *) data, (sf_count_t)inlen);
 	}
 
-	handle->pos += *len;
+	handle->pos += (int64_t)*len;
 	handle->sample_count += *len;
 
 	return *len ? SWITCH_STATUS_SUCCESS : SWITCH_STATUS_FALSE;

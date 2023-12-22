@@ -635,7 +635,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 
 	buffer[0] = 0;
 
-	sf_command(NULL, SFC_GET_LIB_VERSION, buffer, sizeof(buffer));
+	sf_command(nullptr, SFC_GET_LIB_VERSION, buffer, sizeof(buffer));
 	if (strlen(buffer) < 1) {
 		switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, "Line %d: could not retrieve lib version.\n", __LINE__);
 		return SWITCH_STATUS_FALSE;
@@ -643,8 +643,8 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "\nLibSndFile Version : %s Supported Formats\n", buffer);
 	switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_INFO, "================================================================================\n");
-	sf_command(NULL, SFC_GET_FORMAT_MAJOR_COUNT, &major_count, sizeof(int));
-	sf_command(NULL, SFC_GET_FORMAT_SUBTYPE_COUNT, &subtype_count, sizeof(int));
+	sf_command(nullptr, SFC_GET_FORMAT_MAJOR_COUNT, &major_count, sizeof(int));
+	sf_command(nullptr, SFC_GET_FORMAT_SUBTYPE_COUNT, &subtype_count, sizeof(int));
 
 	//sfinfo.channels = 1;
 	len = ((major_count + (exlen + 2) + 1) * sizeof(char *));
@@ -711,7 +711,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 
 		for (s = 0; s < subtype_count; s++) {
 			info.format = s;
-			sf_command(NULL, SFC_GET_FORMAT_SUBTYPE, &info, sizeof(info));
+			sf_command(nullptr, SFC_GET_FORMAT_SUBTYPE, &info, sizeof(info));
 			format = (format & SF_FORMAT_TYPEMASK) | info.format;
 			//sfinfo.format = format;
 			/*

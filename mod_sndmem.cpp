@@ -654,7 +654,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	for (m = 0; m < major_count; m++) {
 		skip = 0;
 		info.format = m;
-		sf_command(NULL, SFC_GET_FORMAT_MAJOR, &info, sizeof(info));
+		sf_command(nullptr, SFC_GET_FORMAT_MAJOR, &info, sizeof(info));
 		if (!exten_is_allowed(info.extension)) {
 			continue;
 		}

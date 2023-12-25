@@ -773,7 +773,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load)
 
 	switch_core_hash_init(&globals.format_hash);
 
-	if ((xml = switch_xml_open_cfg(cf, &cfg, NULL))) {
+	if ((xml = switch_xml_open_cfg(cf, &cfg, nullptr))) {
 		if ((settings = switch_xml_child(cfg, "settings"))) {
 			for (param = switch_xml_child(settings, "param"); param; param = param->next) {
 				char *var = (char *) switch_xml_attr_soft(param, "name");

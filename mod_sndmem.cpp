@@ -32,6 +32,9 @@
 #include <switch.h>
 #include <sndfile.h>
 
+// for vfs mem
+#include <oss_c_sdk/oss_api.h>
+
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load);
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown);
 SWITCH_MODULE_DEFINITION(mod_sndmem, mod_sndmem_load, mod_sndmem_shutdown, NULL);
@@ -762,6 +765,49 @@ SWITCH_STANDARD_API(mod_sndmem_debug)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+static switch_status_t vfs_mem_on_channel_init(switch_core_session_t *session);
+
+const static switch_state_handler_table_t vfs_mem_cs_handlers = {
+        /*! executed when the state changes to init */
+        // switch_state_handler_t on_init;
+        vfs_mem_on_channel_init,
+        /*! executed when the state changes to routing */
+        // switch_state_handler_t on_routing;
+        nullptr,
+        /*! executed when the state changes to execute */
+        // switch_state_handler_t on_execute;
+        nullptr,
+        /*! executed when the state changes to hangup */
+        // switch_state_handler_t on_hangup;
+        nullptr,
+        /*! executed when the state changes to exchange_media */
+        // switch_state_handler_t on_exchange_media;
+        nullptr,
+        /*! executed when the state changes to soft_execute */
+        // switch_state_handler_t on_soft_execute;
+        nullptr,
+        /*! executed when the state changes to consume_media */
+        // switch_state_handler_t on_consume_media;
+        nullptr,
+        /*! executed when the state changes to hibernate */
+        // switch_state_handler_t on_hibernate;
+        nullptr,
+        /*! executed when the state changes to reset */
+        // switch_state_handler_t on_reset;
+        nullptr,
+        /*! executed when the state changes to park */
+        // switch_state_handler_t on_park;
+        nullptr,
+        /*! executed when the state changes to reporting */
+        // switch_state_handler_t on_reporting;
+        nullptr,
+        /*! executed when the state changes to destroy */
+        // switch_state_handler_t on_destroy;
+        nullptr,
+        // int flags;
+        0
+};
+
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load)
 {
 	switch_file_interface_t *file_interface;
@@ -812,15 +858,200 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load)
 	switch_console_set_complete("add sndmem_debug on");
 	switch_console_set_complete("add sndmem_debug off");
 
-	/* indicate that the module should continue to be loaded */
+    // register vfs_mem state handlers
+    switch_core_add_state_handler(&vfs_mem_cs_handlers);
+
+    /* indicate that the module should continue to be loaded */
 	return SWITCH_STATUS_SUCCESS;
 }
 
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown)
 {
+    // unregister vfs_mem state handlers
+    switch_core_remove_state_handler(&vfs_mem_cs_handlers);
+
 	switch_core_hash_destroy(&globals.format_hash);
 
 	return SWITCH_STATUS_SUCCESS;
+}
+
+// ============================================= vfs in memory =============================================
+typedef struct {
+    // TBD: 'vars' need free for strndup
+    char *vars;
+    // TBD: 'object' need free for strdup
+    char *fullpath;
+    aos_pool_t *aos_pool;
+    aos_list_t buffer;
+    size_t length;
+    size_t position;
+    aos_buf_t *cur_buf;
+    size_t cur_buf_pos;
+} vfs_mem_context_t;
+
+void *mem_open_func(const char *path) {
+    const char *lbraces = strchr(path, '{');
+    const char *rbraces = strchr(path, '}');
+    if (!lbraces || !rbraces) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {bucket=?}\n");
+        return nullptr;
+    }
+    char *vars = strndup(lbraces + 1, rbraces - lbraces - 1);
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);
+
+    auto mem_ctx = (vfs_mem_context_t*)malloc(sizeof(vfs_mem_context_t));
+    memset(mem_ctx, 0, sizeof(vfs_mem_context_t));
+
+    // TBD: vars & path need free
+    mem_ctx->vars = vars;
+    mem_ctx->fullpath = strdup(rbraces + 1);
+
+    // 重新创建一个内存池，第二个参数是NULL，表示没有继承其它内存池。
+    aos_pool_create(&mem_ctx->aos_pool, nullptr);
+    aos_list_init(&mem_ctx->buffer);
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n", mem_ctx->fullpath);
+
+    return mem_ctx;
+}
+
+void mem_close_func(vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_close_func: %s\n", mem_ctx->fullpath);
+    }
+    /*
+    if (APR_SUCCESS != switch_queue_trypush(g_ossvfs_to_upload, oss_ctx)) {
+        // then destroy oss_ctx
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "oss_close_func: switch_queue_trypush failed.\n");
+        release_oss_context(mem_ctx);
+    }
+    */
+}
+
+size_t mem_get_filelen_func(vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_get_filelen_func: %s -> %zu\n", mem_ctx->fullpath,
+                          mem_ctx->length);
+    }
+    return mem_ctx->length;
+}
+
+size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_seek_func: %s -> whence:%d:%zu\n",
+                          mem_ctx->fullpath, whence, offset);
+    }
+    size_t seek_from_start;
+    switch(whence) {
+        case SEEK_SET:
+            seek_from_start = offset;
+            break;
+        case SEEK_CUR:
+            seek_from_start = mem_ctx->position + offset;
+            break;
+        case SEEK_END:
+            seek_from_start = mem_ctx->length + offset;
+            break;
+        default:
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mem_seek_func: invalid whence: %d\n", whence);
+            return mem_ctx->position;
+    }
+    if (seek_from_start < 0 || seek_from_start > mem_ctx->length) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mem_seek_func: invalid offset: %zu\n", seek_from_start);
+        return mem_ctx->position;
+    }
+    mem_ctx->position = seek_from_start;
+
+    aos_buf_t *b;
+    int64_t pos = 0;
+    aos_list_for_each_entry(aos_buf_t, b, &mem_ctx->buffer, node) {
+        int len = aos_buf_size(b);
+        if (pos + len >= seek_from_start) {
+            mem_ctx->cur_buf = b;
+            mem_ctx->cur_buf_pos = seek_from_start - pos;
+            break;
+        } else {
+            pos += len;
+        }
+    }
+    return mem_ctx->position;
+}
+
+size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_read_func: %s -> %ld\n", mem_ctx->fullpath,
+                          count);
+    }
+    return -1;
+}
+
+void add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
+    aos_buf_t *part = aos_create_buf(mem_ctx->aos_pool, (int)count);
+    memcpy(part->pos, ptr, count);
+    part->last += count;
+    aos_list_add_tail(&part->node, &mem_ctx->buffer);
+    mem_ctx->length += count;
+    mem_ctx->position = mem_ctx->length;
+    mem_ctx->cur_buf = part;
+    mem_ctx->cur_buf_pos = count;
+}
+
+size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_write_func: %s -> %ld\n", mem_ctx->fullpath,
+                          count);
+    }
+    size_t wsize;
+    size_t bytes = 0;
+
+    while (true) {
+        wsize = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
+        if (wsize == 0 && count > bytes) {
+            // if (&oss_ctx->cur_buf->node == &oss_ctx->buffer) {
+            if (mem_ctx->position >= mem_ctx->length) {
+                add_new_buf((uint8_t*)ptr + bytes, count - bytes, mem_ctx);
+                bytes = count;
+                return bytes;
+            } else {
+                mem_ctx->cur_buf = aos_list_entry(mem_ctx->cur_buf->node.next, aos_buf_t, node);
+                mem_ctx->cur_buf_pos = 0;
+                continue;
+            }
+        }
+        wsize = aos_min(count - bytes, wsize);
+        if (wsize == 0) {
+            return bytes;
+        }
+        memcpy(mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, (uint8_t*)ptr + bytes, wsize);
+        bytes += wsize;
+        mem_ctx->cur_buf_pos += wsize;
+        mem_ctx->position += wsize;
+    }
+}
+
+size_t mem_tell_func(vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_tell_func: %s -> %zu\n", mem_ctx->fullpath,
+                          mem_ctx->position);
+    }
+    return mem_ctx->position;
+}
+
+static const vfs_func_t g_vfs_mem_funcs = {
+        mem_open_func,
+        reinterpret_cast<vfs_close_func_t>(mem_close_func),
+        reinterpret_cast<vfs_get_filelen_func_t>(mem_get_filelen_func),
+        reinterpret_cast<vfs_seek_func_t>(mem_seek_func),
+        reinterpret_cast<vfs_read_func_t>(mem_read_func),
+        reinterpret_cast<vfs_write_func_t>(mem_write_func),
+        reinterpret_cast<vfs_tell_func_t>(mem_tell_func)
+};
+
+static switch_status_t global_on_channel_init(switch_core_session_t *session) {
+    switch_channel_t *channel = switch_core_session_get_channel(session);
+    switch_channel_set_private(channel, "vfs_mem", &g_vfs_mem_funcs);
+    return SWITCH_STATUS_SUCCESS;
 }
 
 /* For Emacs:

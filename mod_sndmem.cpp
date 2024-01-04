@@ -1065,7 +1065,7 @@ static const vfs_func_t g_vfs_mem_funcs = {
         reinterpret_cast<vfs_tell_func_t>(mem_tell_func)
 };
 
-static switch_status_t global_on_channel_init(switch_core_session_t *session) {
+static switch_status_t vfs_mem_on_channel_init(switch_core_session_t *session) {
     switch_channel_t *channel = switch_core_session_get_channel(session);
     switch_channel_set_private(channel, "vfs_mem", &g_vfs_mem_funcs);
     return SWITCH_STATUS_SUCCESS;

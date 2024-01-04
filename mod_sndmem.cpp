@@ -906,6 +906,8 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx end for [%p]\n", mem_ctx);
 }
 
+size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx);
+
 void *mem_open_func(const char *path) {
     const char *lbraces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
@@ -925,6 +927,7 @@ void *mem_open_func(const char *path) {
         free(vars);
         free(fullpath);
 
+        mem_seek_func(0, SEEK_SET, org);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s exist\n", org->fullpath);
 
         return org;

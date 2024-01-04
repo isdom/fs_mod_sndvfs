@@ -765,6 +765,8 @@ SWITCH_STANDARD_API(mod_sndmem_debug)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+switch_hash_t  *g_fullpath2memfile;
+
 static switch_status_t vfs_mem_on_channel_init(switch_core_session_t *session);
 
 const static switch_state_handler_table_t vfs_mem_cs_handlers = {
@@ -808,8 +810,7 @@ const static switch_state_handler_table_t vfs_mem_cs_handlers = {
         0
 };
 
-SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load)
-{
+SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 	switch_file_interface_t *file_interface;
 	switch_api_interface_t *commands_api_interface;
 	char *cf = "sndfile.conf";
@@ -861,12 +862,15 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load)
     // register vfs_mem state handlers
     switch_core_add_state_handler(&vfs_mem_cs_handlers);
 
+    switch_core_hash_init(&g_fullpath2memfile);
+
     /* indicate that the module should continue to be loaded */
 	return SWITCH_STATUS_SUCCESS;
 }
 
-SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown)
-{
+SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown) {
+    switch_core_hash_destroy(&g_fullpath2memfile);
+
     // unregister vfs_mem state handlers
     switch_core_remove_state_handler(&vfs_mem_cs_handlers);
 
@@ -876,6 +880,7 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown)
 }
 
 // ============================================= vfs in memory =============================================
+
 typedef struct {
     // TBD: 'vars' need free for strndup
     char *vars;
@@ -893,27 +898,39 @@ void *mem_open_func(const char *path) {
     const char *lbraces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
     if (!lbraces || !rbraces) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {bucket=?}\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {?=?}\n");
         return nullptr;
     }
     char *vars = strndup(lbraces + 1, rbraces - lbraces - 1);
+    char *fullpath = strdup(rbraces + 1);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, fullpath);
 
-    auto mem_ctx = (vfs_mem_context_t*)malloc(sizeof(vfs_mem_context_t));
-    memset(mem_ctx, 0, sizeof(vfs_mem_context_t));
+    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_fullpath2memfile, fullpath);
+    if (org) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) exist as [%p].\n",
+                          fullpath, org);
+        free(vars);
+        free(fullpath);
+        return org;
+    } else {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) !NOT! exist, create new one.\n",
+                          fullpath);
+        auto mem_ctx = (vfs_mem_context_t*)malloc(sizeof(vfs_mem_context_t));
+        memset(mem_ctx, 0, sizeof(vfs_mem_context_t));
 
-    // TBD: vars & path need free
-    mem_ctx->vars = vars;
-    mem_ctx->fullpath = strdup(rbraces + 1);
+        // TBD: vars & path need free
+        mem_ctx->vars = vars;
+        mem_ctx->fullpath = fullpath;
 
-    // 重新创建一个内存池，第二个参数是NULL，表示没有继承其它内存池。
-    aos_pool_create(&mem_ctx->aos_pool, nullptr);
-    aos_list_init(&mem_ctx->buffer);
+        // 重新创建一个内存池，第二个参数是NULL，表示没有继承其它内存池。
+        aos_pool_create(&mem_ctx->aos_pool, nullptr);
+        aos_list_init(&mem_ctx->buffer);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n", mem_ctx->fullpath);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n", mem_ctx->fullpath);
 
-    return mem_ctx;
+        return mem_ctx;
+    }
 }
 
 void mem_close_func(vfs_mem_context_t *mem_ctx) {

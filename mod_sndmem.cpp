@@ -1025,7 +1025,29 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_read_func: %s -> %ld\n", mem_ctx->fullpath,
                           count);
     }
-    return -1;
+    size_t rsize;
+    size_t bytes = 0;
+
+    while (true) {
+        rsize = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
+        if (rsize == 0 && count > bytes) {
+            if (mem_ctx->position >= mem_ctx->length) {
+                return bytes;
+            } else {
+                mem_ctx->cur_buf = aos_list_entry(mem_ctx->cur_buf->node.next, aos_buf_t, node);
+                mem_ctx->cur_buf_pos = 0;
+                continue;
+            }
+        }
+        rsize = aos_min(count - bytes, rsize);
+        if (rsize == 0) {
+            return bytes;
+        }
+        memcpy((uint8_t*)ptr + bytes, mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, rsize);
+        bytes += rsize;
+        mem_ctx->cur_buf_pos += rsize;
+        mem_ctx->position += rsize;
+    }
 }
 
 void add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {

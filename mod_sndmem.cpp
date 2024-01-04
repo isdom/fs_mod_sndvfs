@@ -894,6 +894,18 @@ typedef struct {
     size_t cur_buf_pos;
 } vfs_mem_context_t;
 
+void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx begin for [%p]\n", mem_ctx);
+
+    if (mem_ctx) {
+        aos_pool_destroy(mem_ctx->aos_pool);
+        free(mem_ctx->vars);
+        free(mem_ctx->fullpath);
+        free(mem_ctx);
+    }
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx end for [%p]\n", mem_ctx);
+}
+
 void *mem_open_func(const char *path) {
     const char *lbraces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
@@ -912,6 +924,9 @@ void *mem_open_func(const char *path) {
                           fullpath, org);
         free(vars);
         free(fullpath);
+
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s exist\n", org->fullpath);
+
         return org;
     } else {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) !NOT! exist, create new one.\n",
@@ -926,6 +941,13 @@ void *mem_open_func(const char *path) {
         // 重新创建一个内存池，第二个参数是NULL，表示没有继承其它内存池。
         aos_pool_create(&mem_ctx->aos_pool, nullptr);
         aos_list_init(&mem_ctx->buffer);
+
+        if ( SWITCH_STATUS_SUCCESS == switch_core_hash_insert_destructor(g_fullpath2memfile, fullpath, mem_ctx,
+                                                                         reinterpret_cast<hashtable_destructor_t>(release_mem_ctx))) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile %s create success: [%p]\n", fullpath, mem_ctx);
+        } else {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile %s create failed\n", fullpath);
+        }
 
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n", mem_ctx->fullpath);
 

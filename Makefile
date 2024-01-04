@@ -13,7 +13,7 @@ SER_SRCS=mod_sndmem.cpp
 FREESWITCH_LIBS=-L/usr/local/freeswitch/lib -lfreeswitch
 FREESWITCH_INCLUDE=-I/usr/local/freeswitch/include/freeswitch
 
-SNDFILE_LIBS=-lsndfile -ldl -D_GLIBCXX_USE_CXX11_ABI=0
+SNDFILE_LIBS=-loss_c_sdk_static -lapr-1 -laprutil-1 -lcurl -lmxml -lsndfile -ldl -D_GLIBCXX_USE_CXX11_ABI=0
 
 TARGET_SER=mod_sndmem.so
 

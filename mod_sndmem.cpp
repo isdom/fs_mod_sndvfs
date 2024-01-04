@@ -39,6 +39,8 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load);
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown);
 SWITCH_MODULE_DEFINITION(mod_sndmem, mod_sndmem_load, mod_sndmem_shutdown, NULL);
 
+typedef bool (*vfs_exist_func_t) (const char *path);
+
 typedef void *(*vfs_open_func_t) (const char *path);
 typedef void (*vfs_close_func_t) (void *user_data);
 
@@ -49,6 +51,7 @@ typedef size_t (*vfs_write_func_t) (const void *ptr, size_t count, void *user_da
 typedef size_t (*vfs_tell_func_t) (void *user_data);
 
 typedef struct {
+    vfs_exist_func_t vfs_exist_func;
     vfs_open_func_t vfs_open_func;
     vfs_close_func_t vfs_close_func;
     vfs_get_filelen_func_t vfs_get_filelen_func;
@@ -908,6 +911,19 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
 
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx);
 
+bool mem_exist_func(const char *path) {
+    const char *lbraces = strchr(path, '{');
+    const char *rbraces = strchr(path, '}');
+    if (!lbraces || !rbraces) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {?=?}\n");
+        return false;
+    }
+    char *fullpath = strdup(rbraces + 1);
+    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_fullpath2memfile, fullpath);
+    free(fullpath);
+    return org != nullptr;
+}
+
 void *mem_open_func(const char *path) {
     const char *lbraces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
@@ -1103,6 +1119,7 @@ size_t mem_tell_func(vfs_mem_context_t *mem_ctx) {
 }
 
 static const vfs_func_t g_vfs_mem_funcs = {
+        mem_exist_func,
         mem_open_func,
         reinterpret_cast<vfs_close_func_t>(mem_close_func),
         reinterpret_cast<vfs_get_filelen_func_t>(mem_get_filelen_func),

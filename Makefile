@@ -14,6 +14,7 @@ FREESWITCH_LIBS=-L/usr/local/freeswitch/lib -lfreeswitch
 FREESWITCH_INCLUDE=-I/usr/local/freeswitch/include/freeswitch
 
 SNDFILE_LIBS=-loss_c_sdk_static -lapr-1 -laprutil-1 -lcurl -lmxml -lsndfile -ldl -D_GLIBCXX_USE_CXX11_ABI=0
+OSS_INCLUDE=-I/usr/include/apr-1.0
 
 TARGET_SER=mod_sndmem.so
 
@@ -22,7 +23,7 @@ SER_OBJS=$(SER_SRCS:.c=.o)
 default: $(TARGET_SER)
 
 $(TARGET_SER): $(SER_OBJS) $(HEADERS)
-	$(SER_CC) $(CFLAGS) -o $(TARGET_SER) $(SER_OBJS) $(SNDFILE_LIBS) $(FREESWITCH_INCLUDE) $(FREESWITCH_LIBS)
+	$(SER_CC) $(CFLAGS) -o $(TARGET_SER) $(SER_OBJS) $(SNDFILE_LIBS) $(FREESWITCH_INCLUDE) $(FREESWITCH_LIBS) $(OSS_INCLUDE)
 #	$(SER_STRIP) $(TARGET_SER)
 
 #$(SER_OBJS):%.o:%.c

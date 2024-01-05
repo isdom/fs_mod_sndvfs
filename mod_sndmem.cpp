@@ -813,6 +813,9 @@ const static switch_state_handler_table_t vfs_mem_cs_handlers = {
         0
 };
 
+#define FREEVFSMEMFILE_SYNTAX "fullpath=<path>"
+SWITCH_STANDARD_API(free_vfs_mem_file_function);
+
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 	switch_file_interface_t *file_interface;
 	switch_api_interface_t *commands_api_interface;
@@ -867,6 +870,8 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 
     switch_core_hash_init(&g_fullpath2memfile);
 
+    SWITCH_ADD_API(commands_api_interface, "free_vfs_mem_file", "free vfs mem file", free_vfs_mem_file_function, FREEVFSMEMFILE_SYNTAX);
+
     /* indicate that the module should continue to be loaded */
 	return SWITCH_STATUS_SUCCESS;
 }
@@ -907,6 +912,82 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
         free(mem_ctx);
     }
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx end for [%p]\n", mem_ctx);
+}
+
+#define MAX_API_ARGC 10
+
+
+// free_vfs_mem_file fullpath=<path>
+SWITCH_STANDARD_API(free_vfs_mem_file_function) {
+    if (zstr(cmd)) {
+        stream->write_function(stream, "free_vfs_mem_file: parameter missing.\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "free_vfs_mem_file: parameter missing.\n");
+        return SWITCH_STATUS_SUCCESS;
+    }
+
+    switch_status_t status = SWITCH_STATUS_SUCCESS;
+    char *_fullpath = nullptr;
+
+    switch_memory_pool_t *pool;
+    switch_core_new_memory_pool(&pool);
+    char *my_cmd = switch_core_strdup(pool, cmd);
+
+    char *argv[MAX_API_ARGC];
+    memset(argv, 0, sizeof(char *) * MAX_API_ARGC);
+
+    int argc = switch_split(my_cmd, ' ', argv);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "cmd:%s, args count: %d\n", my_cmd, argc);
+    }
+
+    if (argc < 1) {
+        stream->write_function(stream, "fullpath is required.\n");
+        switch_goto_status(SWITCH_STATUS_SUCCESS, end);
+    }
+
+    for (int idx = 1; idx < MAX_API_ARGC; idx++) {
+        if (argv[idx]) {
+            char *ss[2] = {nullptr, nullptr};
+            int cnt = switch_split(argv[idx], '=', ss);
+            if (cnt == 2) {
+                char *var = ss[0];
+                char *val = ss[1];
+                if (globals.debug) {
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "process arg: %s = %s\n", var, val);
+                }
+                if (!strcasecmp(var, "fullpath")) {
+                    _fullpath = val;
+                    continue;
+                }
+            }
+        }
+    }
+
+    if (!_fullpath) {
+        stream->write_function(stream, "fullpath is required.\n");
+        switch_goto_status(SWITCH_STATUS_SUCCESS, end);
+    }
+
+    {
+        auto tofree = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _fullpath);
+        if (tofree) {
+            auto deleted = switch_core_hash_delete(g_fullpath2memfile, _fullpath);
+            // has free inside switch_core_hash_delete by hashtable_destructor_t(tofree)
+            // release_mem_ctx(tofree);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
+                              "release vfs mem file [%p] associate with %s, check deleted [%p]\n",
+                              tofree, _fullpath, deleted);
+            stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] success.\n", _fullpath);
+        } else {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+                              "can't found vfs mem file associate with %s\n", _fullpath);
+            stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] failed.\n", _fullpath);
+        }
+    }
+
+end:
+    switch_core_destroy_memory_pool(&pool);
+    return status;
 }
 
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx);

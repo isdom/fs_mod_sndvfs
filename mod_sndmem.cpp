@@ -906,7 +906,9 @@ typedef struct {
 } vfs_mem_context_t;
 
 void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx begin for [%p]\n", mem_ctx);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx begin for [%p]\n", mem_ctx);
+    }
 
     if (mem_ctx) {
         aos_pool_destroy(mem_ctx->aos_pool);
@@ -914,11 +916,12 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
         free(mem_ctx->fullpath);
         free(mem_ctx);
     }
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx end for [%p]\n", mem_ctx);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx end for [%p]\n", mem_ctx);
+    }
 }
 
 #define MAX_API_ARGC 10
-
 
 // free_vfs_mem_file fullpath=<path>
 SWITCH_STANDARD_API(free_vfs_mem_file_function) {
@@ -972,7 +975,9 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     }
 
     {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+        if (globals.debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+        }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
         auto tofree = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _fullpath);
         if (tofree) {
@@ -980,18 +985,22 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
             // has free inside switch_core_hash_delete by hashtable_destructor_t(tofree)
             // release_mem_ctx(tofree);
             switch_thread_rwlock_unlock (g_rwlock_f2m);
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
-
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
-                              "release vfs mem file [%p] associate with %s, check deleted [%p]\n",
-                              tofree, _fullpath, deleted);
+            if (globals.debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n",
+                                  g_rwlock_f2m);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
+                                  "release vfs mem file [%p] associate with %s, check deleted [%p]\n",
+                                  tofree, _fullpath, deleted);
+            }
             stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] success.\n", _fullpath);
         } else {
             switch_thread_rwlock_unlock (g_rwlock_f2m);
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
-
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
-                              "can't found vfs mem file associate with %s\n", _fullpath);
+            if (globals.debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n",
+                                  g_rwlock_f2m);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+                                  "can't found vfs mem file associate with %s\n", _fullpath);
+            }
             stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] failed.\n", _fullpath);
         }
     }
@@ -1012,13 +1021,17 @@ bool mem_exist_func(const char *path) {
     }
     char *fullpath = strdup(rbraces + 1);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
 
     auto org = (vfs_mem_context_t*)switch_core_hash_find(g_fullpath2memfile, fullpath);
 
     switch_thread_rwlock_unlock (g_rwlock_f2m);
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    }
 
     free(fullpath);
     return org != nullptr;
@@ -1034,29 +1047,39 @@ void *mem_open_func(const char *path) {
     char *vars = strndup(lbraces + 1, rbraces - lbraces - 1);
     char *fullpath = strdup(rbraces + 1);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, fullpath);
-
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, fullpath);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
 
     auto org = (vfs_mem_context_t*)switch_core_hash_find(g_fullpath2memfile, fullpath);
 
     switch_thread_rwlock_unlock (g_rwlock_f2m);
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+    }
     if (org) {
 
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) exist as [%p].\n",
-                          fullpath, org);
+        if (globals.debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) exist as [%p].\n",
+                              fullpath, org);
+        }
         free(vars);
         free(fullpath);
 
         mem_seek_func(0, SEEK_SET, org);
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s exist\n", org->fullpath);
+        if (globals.debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s exist\n",
+                              org->fullpath);
+        }
 
         return org;
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) !NOT! exist, create new one.\n",
-                          fullpath);
+        if (globals.debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) !NOT! exist, create new one.\n",
+                              fullpath);
+        }
         auto mem_ctx = (vfs_mem_context_t*)malloc(sizeof(vfs_mem_context_t));
         memset(mem_ctx, 0, sizeof(vfs_mem_context_t));
 
@@ -1068,20 +1091,29 @@ void *mem_open_func(const char *path) {
         aos_pool_create(&mem_ctx->aos_pool, nullptr);
         aos_list_init(&mem_ctx->buffer);
 
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+        if (globals.debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+        }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
 
         if ( SWITCH_STATUS_SUCCESS == switch_core_hash_insert_destructor(g_fullpath2memfile, fullpath, mem_ctx,
                                                                          reinterpret_cast<hashtable_destructor_t>(release_mem_ctx))) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile %s create success: [%p]\n", fullpath, mem_ctx);
+            if (globals.debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile %s create success: [%p]\n", fullpath,
+                                  mem_ctx);
+            }
         } else {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile %s create failed\n", fullpath);
+            if (globals.debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile %s create failed\n", fullpath);
+            }
         }
 
         switch_thread_rwlock_unlock (g_rwlock_f2m);
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
-
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n", mem_ctx->fullpath);
+        if (globals.debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n",
+                              mem_ctx->fullpath);
+        }
 
         return mem_ctx;
     }

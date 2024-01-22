@@ -1186,12 +1186,12 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_read_func: %s -> %ld\n", mem_ctx->fullpath,
                           count);
     }
-    size_t rsize;
+    size_t read_size;
     size_t bytes = 0;
 
     while (true) {
-        rsize = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
-        if (rsize == 0 && count > bytes) {
+        read_size = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
+        if (read_size == 0 && count > bytes) {
             if (mem_ctx->position >= mem_ctx->length) {
                 return bytes;
             } else {
@@ -1200,14 +1200,14 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
                 continue;
             }
         }
-        rsize = aos_min(count - bytes, rsize);
-        if (rsize == 0) {
+        read_size = aos_min(count - bytes, read_size);
+        if (read_size == 0) {
             return bytes;
         }
-        memcpy((uint8_t*)ptr + bytes, mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, rsize);
-        bytes += rsize;
-        mem_ctx->cur_buf_pos += rsize;
-        mem_ctx->position += rsize;
+        memcpy((uint8_t*)ptr + bytes, mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, read_size);
+        bytes += read_size;
+        mem_ctx->cur_buf_pos += read_size;
+        mem_ctx->position += read_size;
     }
 }
 
@@ -1227,12 +1227,12 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_write_func: %s -> %ld\n", mem_ctx->fullpath,
                           count);
     }
-    size_t wsize;
+    size_t write_size;
     size_t bytes = 0;
 
     while (true) {
-        wsize = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
-        if (wsize == 0 && count > bytes) {
+        write_size = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
+        if (write_size == 0 && count > bytes) {
             // if (&oss_ctx->cur_buf->node == &oss_ctx->buffer) {
             if (mem_ctx->position >= mem_ctx->length) {
                 add_new_buf((uint8_t*)ptr + bytes, count - bytes, mem_ctx);
@@ -1244,14 +1244,14 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
                 continue;
             }
         }
-        wsize = aos_min(count - bytes, wsize);
-        if (wsize == 0) {
+        write_size = aos_min(count - bytes, write_size);
+        if (write_size == 0) {
             return bytes;
         }
-        memcpy(mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, (uint8_t*)ptr + bytes, wsize);
-        bytes += wsize;
-        mem_ctx->cur_buf_pos += wsize;
-        mem_ctx->position += wsize;
+        memcpy(mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, (uint8_t*)ptr + bytes, write_size);
+        bytes += write_size;
+        mem_ctx->cur_buf_pos += write_size;
+        mem_ctx->position += write_size;
     }
 }
 

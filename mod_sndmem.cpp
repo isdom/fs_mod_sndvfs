@@ -296,7 +296,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	} else if (!strcmp(ext, "oga") || !strcmp(ext, "ogg")) {
 		context->sfinfo.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = handle->samplerate;
+			context->sfinfo.samplerate = (int)handle->samplerate;
 		}
 	} else if (!strcmp(ext, "wve")) {
 		context->sfinfo.format = SF_FORMAT_WVE | SF_FORMAT_ALAW;

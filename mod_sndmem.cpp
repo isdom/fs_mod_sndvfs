@@ -143,10 +143,10 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "var:%s, args count: %d\n", vars, argc);
     }
 
-    for (int idx = 0; idx < MAX_ARGS; idx++) {
-        if (argv[idx]) {
+    for (auto & idx : argv) {
+        if (idx) {
             char *ss[2] = {nullptr, nullptr};
-            int cnt = switch_split(argv[idx], '=', ss);
+            int cnt = switch_split(idx, '=', ss);
             if (cnt == 2) {
                 char *var = ss[0];
                 char *val = ss[1];

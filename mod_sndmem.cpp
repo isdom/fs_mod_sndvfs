@@ -497,7 +497,7 @@ static switch_status_t sndfile_file_truncate(switch_file_handle_t *handle, int64
 
 static switch_status_t sndfile_file_close(switch_file_handle_t *handle)
 {
-	sndfile_context *context = (sndfile_context *)handle->private_info;
+	auto *context = (sndfile_context *)handle->private_info;
 
 	if (context) {
 		sf_close(context->handle);

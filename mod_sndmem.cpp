@@ -489,7 +489,7 @@ sndfile_perform_open(sndfile_context *context, const char *path, int mode, switc
 
 static switch_status_t sndfile_file_truncate(switch_file_handle_t *handle, int64_t offset)
 {
-	sndfile_context *context = (sndfile_context *)handle->private_info;
+	auto *context = (sndfile_context *)handle->private_info;
 	sf_command(context->handle, SFC_FILE_TRUNCATE, &offset, sizeof(offset));
 	handle->pos = 0;
 	return SWITCH_STATUS_SUCCESS;

@@ -580,7 +580,7 @@ static switch_status_t sndfile_file_write(switch_file_handle_t *handle, void *da
 
 static switch_status_t sndfile_file_set_string(switch_file_handle_t *handle, switch_audio_col_t col, const char *string)
 {
-	sndfile_context *context = (sndfile_context *)handle->private_info;
+	auto *context = (sndfile_context *)handle->private_info;
 
 	return sf_set_string(context->handle, (int) col, string) ? SWITCH_STATUS_FALSE : SWITCH_STATUS_SUCCESS;
 }

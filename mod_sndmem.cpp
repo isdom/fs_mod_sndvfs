@@ -509,7 +509,7 @@ static switch_status_t sndfile_file_close(switch_file_handle_t *handle)
 
 static switch_status_t sndfile_file_seek(switch_file_handle_t *handle, unsigned int *cur_sample, int64_t samples, int whence)
 {
-	sndfile_context *context = (sndfile_context *)handle->private_info;
+	auto *context = (sndfile_context *)handle->private_info;
 	sf_count_t count;
 	switch_status_t r = SWITCH_STATUS_SUCCESS;
 

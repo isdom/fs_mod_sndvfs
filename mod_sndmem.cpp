@@ -653,7 +653,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	sf_command(nullptr, SFC_GET_FORMAT_SUBTYPE_COUNT, &subtype_count, sizeof(int));
 
 	//sfinfo.channels = 1;
-	len = ((major_count + (exlen + 2) + 1) * sizeof(char *));
+	len = (int)((major_count + (exlen + 2) + 1) * sizeof(char *));
 	supported_formats = (char **)switch_core_alloc(pool, len);
 
 	len = 0;

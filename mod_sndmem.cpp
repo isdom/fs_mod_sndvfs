@@ -820,7 +820,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function);
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 	switch_file_interface_t *file_interface;
 	switch_api_interface_t *commands_api_interface;
-	char *cf = "sndfile.conf";
+	const char *cf = "sndfile.conf";
 	switch_xml_t cfg, xml, settings, param;
 
 	memset(&globals, 0, sizeof(globals));

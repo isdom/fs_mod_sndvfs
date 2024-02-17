@@ -186,7 +186,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
         return SWITCH_STATUS_GENERR;
     }
 
-	if ((ext = strrchr(path, '.')) == 0) {
+	if ((ext = strrchr(path, '.')) == nullptr) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid Format\n");
 		return SWITCH_STATUS_GENERR;
 	}

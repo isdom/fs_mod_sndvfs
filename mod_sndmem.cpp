@@ -209,7 +209,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		return SWITCH_STATUS_GENERR;
 	}
 
-	if ((context = (sndfile_context*)switch_core_alloc(handle->memory_pool, sizeof(*context))) == 0) {
+	if ((context = (sndfile_context*)switch_core_alloc(handle->memory_pool, sizeof(*context))) == nullptr) {
 		return SWITCH_STATUS_MEMERR;
 	}
 

@@ -480,7 +480,7 @@ sndfile_perform_open(sndfile_context *context, const char *path, int mode, switc
         return SWITCH_STATUS_FALSE;
     }
 
-    if ((context->handle = sf_open_virtual(&_sfvirtual, mode, &context->sfinfo, context)) == 0) {
+    if ((context->handle = sf_open_virtual(&_sfvirtual, mode, &context->sfinfo, context)) == nullptr) {
         return SWITCH_STATUS_FALSE;
 	}
 

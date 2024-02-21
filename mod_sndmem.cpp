@@ -636,7 +636,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	} add_ext[] = {
 		{"oga", "ogg"}
 	};
-	int exlen = (sizeof(extras) / sizeof(extras[0]));
+	int ex_len = (sizeof(extras) / sizeof(extras[0]));
 	int add_ext_len = (sizeof(add_ext) / sizeof(add_ext[0]));
 
 	buffer[0] = 0;
@@ -653,7 +653,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	sf_command(nullptr, SFC_GET_FORMAT_SUBTYPE_COUNT, &subtype_count, sizeof(int));
 
 	//sfinfo.channels = 1;
-	len = (int)((major_count + (exlen + 2) + 1) * sizeof(char *));
+	len = (int)((major_count + (ex_len + 2) + 1) * sizeof(char *));
 	supported_formats = (char **)switch_core_alloc(pool, len);
 
 	len = 0;
@@ -735,7 +735,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 
     switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, "len after mem: %d\n", len);
 
-	for (m = 0; m < exlen; m++) {
+	for (m = 0; m < ex_len; m++) {
 		if (exten_is_allowed(extras[m])) {
             // skip extension for temp isdom
 			// supported_formats[len++] = extras[m];

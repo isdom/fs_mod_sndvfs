@@ -814,7 +814,7 @@ const static switch_state_handler_table_t vfs_mem_cs_handlers = {
         0
 };
 
-#define FREEVFSMEMFILE_SYNTAX "fullpath=<path>"
+#define FREEVFSMEMFILE_SYNTAX "full_path=<path>"
 SWITCH_STANDARD_API(free_vfs_mem_file_function);
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
@@ -896,7 +896,7 @@ typedef struct {
     // TBD: 'vars' need free for strndup
     char *vars;
     // TBD: 'object' need free for strdup
-    char *fullpath;
+    char *full_path;
     aos_pool_t *aos_pool;
     aos_list_t buffer;
     size_t length;
@@ -913,7 +913,7 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
     if (mem_ctx) {
         aos_pool_destroy(mem_ctx->aos_pool);
         free(mem_ctx->vars);
-        free(mem_ctx->fullpath);
+        free(mem_ctx->full_path);
         free(mem_ctx);
     }
     if (globals.debug) {
@@ -923,7 +923,7 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
 
 #define MAX_API_ARGC 10
 
-// free_vfs_mem_file fullpath=<path>
+// free_vfs_mem_file full_path=<path>
 SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     if (zstr(cmd)) {
         stream->write_function(stream, "free_vfs_mem_file: parameter missing.\n");
@@ -947,7 +947,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     }
 
     if (argc < 1) {
-        stream->write_function(stream, "fullpath is required.\n");
+        stream->write_function(stream, "full_path is required.\n");
         switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
@@ -961,7 +961,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
                 if (globals.debug) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "process arg: %s = %s\n", var, val);
                 }
-                if (!strcasecmp(var, "fullpath")) {
+                if (!strcasecmp(var, "full_path")) {
                     _fullpath = val;
                     continue;
                 }
@@ -970,7 +970,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     }
 
     if (!_fullpath) {
-        stream->write_function(stream, "fullpath is required.\n");
+        stream->write_function(stream, "full_path is required.\n");
         switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
@@ -1048,7 +1048,7 @@ void *mem_open_func(const char *path) {
     char *fullpath = strdup(rbraces + 1);
 
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, fullpath);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, full_path: %s\n", vars, fullpath);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
     }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
@@ -1071,7 +1071,7 @@ void *mem_open_func(const char *path) {
         mem_seek_func(0, SEEK_SET, org);
         if (globals.debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s exist\n",
-                              org->fullpath);
+                              org->full_path);
         }
 
         return org;
@@ -1085,7 +1085,7 @@ void *mem_open_func(const char *path) {
 
         // TBD: vars & path need free
         mem_ctx->vars = vars;
-        mem_ctx->fullpath = fullpath;
+        mem_ctx->full_path = fullpath;
 
         // 重新创建一个内存池，第二个参数是NULL，表示没有继承其它内存池。
         aos_pool_create(&mem_ctx->aos_pool, nullptr);
@@ -1112,7 +1112,7 @@ void *mem_open_func(const char *path) {
         if (globals.debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_open_func -> full path: %s\n",
-                              mem_ctx->fullpath);
+                              mem_ctx->full_path);
         }
 
         return mem_ctx;
@@ -1121,7 +1121,7 @@ void *mem_open_func(const char *path) {
 
 void mem_close_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_close_func: %s\n", mem_ctx->fullpath);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_close_func: %s\n", mem_ctx->full_path);
     }
     /*
     if (APR_SUCCESS != switch_queue_trypush(g_ossvfs_to_upload, oss_ctx)) {
@@ -1134,7 +1134,7 @@ void mem_close_func(vfs_mem_context_t *mem_ctx) {
 
 size_t mem_get_filelen_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_get_filelen_func: %s -> %zu\n", mem_ctx->fullpath,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_get_filelen_func: %s -> %zu\n", mem_ctx->full_path,
                           mem_ctx->length);
     }
     return mem_ctx->length;
@@ -1143,7 +1143,7 @@ size_t mem_get_filelen_func(vfs_mem_context_t *mem_ctx) {
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_seek_func: %s -> whence:%d:%zu\n",
-                          mem_ctx->fullpath, whence, offset);
+                          mem_ctx->full_path, whence, offset);
     }
     size_t seek_from_start;
     switch(whence) {
@@ -1183,7 +1183,7 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
 
 size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_read_func: %s -> %ld\n", mem_ctx->fullpath,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_read_func: %s -> %ld\n", mem_ctx->full_path,
                           count);
     }
     size_t read_size;
@@ -1224,7 +1224,7 @@ void add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
 
 size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_write_func: %s -> %ld\n", mem_ctx->fullpath,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_write_func: %s -> %ld\n", mem_ctx->full_path,
                           count);
     }
     size_t write_size;
@@ -1257,7 +1257,7 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
 
 size_t mem_tell_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_tell_func: %s -> %zu\n", mem_ctx->fullpath,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_tell_func: %s -> %zu\n", mem_ctx->full_path,
                           mem_ctx->position);
     }
     return mem_ctx->position;

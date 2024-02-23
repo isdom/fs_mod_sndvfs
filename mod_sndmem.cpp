@@ -614,7 +614,7 @@ static switch_bool_t exten_is_allowed(const char *exten) {
 
 /* Registration */
 
-static char **supported_formats;
+static const char **supported_formats;
 
 void dump_formats(const char *fmt) {
     int i;
@@ -654,7 +654,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 
 	//sfinfo.channels = 1;
 	len = (int)((major_count + (ex_len + 2) + 1) * sizeof(char *));
-	supported_formats = (char **)switch_core_alloc(pool, len);
+	supported_formats = (const char **)switch_core_alloc(pool, len);
 
 	len = 0;
 	for (m = 0; m < major_count; m++) {
@@ -814,7 +814,7 @@ const static switch_state_handler_table_t vfs_mem_cs_handlers = {
         0
 };
 
-#define FREEVFSMEMFILE_SYNTAX "full_path=<path>"
+#define FREEVFSMEMFILE_SYNTAX "fullpath=<path>"
 SWITCH_STANDARD_API(free_vfs_mem_file_function);
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
@@ -851,7 +851,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 	file_interface = static_cast<switch_file_interface_t *>(switch_loadable_module_create_interface(*module_interface,
                                                                                                     SWITCH_FILE_INTERFACE));
 	file_interface->interface_name = modname;
-	file_interface->extens = supported_formats;
+	file_interface->extens = (char **)supported_formats;
 	file_interface->file_open = sndfile_file_open;
 	file_interface->file_close = sndfile_file_close;
 	file_interface->file_truncate = sndfile_file_truncate;
@@ -923,7 +923,7 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
 
 #define MAX_API_ARGC 10
 
-// free_vfs_mem_file full_path=<path>
+// free_vfs_mem_file fullpath=<path>
 SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     if (zstr(cmd)) {
         stream->write_function(stream, "free_vfs_mem_file: parameter missing.\n");
@@ -947,7 +947,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     }
 
     if (argc < 1) {
-        stream->write_function(stream, "full_path is required.\n");
+        stream->write_function(stream, "fullpath is required.\n");
         switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
@@ -961,7 +961,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
                 if (globals.debug) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "process arg: %s = %s\n", var, val);
                 }
-                if (!strcasecmp(var, "full_path")) {
+                if (!strcasecmp(var, "fullpath")) {
                     _fullpath = val;
                     continue;
                 }
@@ -970,7 +970,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     }
 
     if (!_fullpath) {
-        stream->write_function(stream, "full_path is required.\n");
+        stream->write_function(stream, "fullpath is required.\n");
         switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
@@ -1048,7 +1048,7 @@ void *mem_open_func(const char *path) {
     char *fullpath = strdup(rbraces + 1);
 
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, full_path: %s\n", vars, fullpath);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, fullpath);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
     }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);

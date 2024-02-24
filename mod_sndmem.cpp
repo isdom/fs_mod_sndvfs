@@ -629,7 +629,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	char buffer[128];
 	int format, major_count, subtype_count, m, s;
 	int len, x, skip, i;
-	const char *extras[] = { "r8", "r16", "r24", "r32", "gsm", "ul", "ulaw", "al", "alaw", "adpcm", "vox", "oga", "ogg", NULL };
+	const char *extras[] = { "r8", "r16", "r24", "r32", "gsm", "ul", "ulaw", "al", "alaw", "adpcm", "vox", "oga", "ogg", nullptr };
 	struct {
 		char ext[8];
 		char new_ext[8];

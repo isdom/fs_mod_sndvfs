@@ -833,7 +833,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 				char *var = (char *) switch_xml_attr_soft(param, "name");
 				char *val = (char *) switch_xml_attr_soft(param, "value");
 				if (!strcasecmp(var, "allowed-extensions") && val) {
-					globals.allowed_extensions_count = switch_separate_string(val, ',', globals.allowed_extensions, (sizeof(globals.allowed_extensions) / sizeof(globals.allowed_extensions[0])));
+					globals.allowed_extensions_count = (int)switch_separate_string(val, ',', globals.allowed_extensions, (sizeof(globals.allowed_extensions) / sizeof(globals.allowed_extensions[0])));
 				}
 			}
 		}

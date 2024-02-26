@@ -979,18 +979,18 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
         }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
-        auto tofree = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _fullpath);
-        if (tofree) {
+        auto to_free = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _fullpath);
+        if (to_free) {
             auto deleted = switch_core_hash_delete(g_fullpath2memfile, _fullpath);
-            // has free inside switch_core_hash_delete by hashtable_destructor_t(tofree)
-            // release_mem_ctx(tofree);
+            // has free inside switch_core_hash_delete by hashtable_destructor_t(to_free)
+            // release_mem_ctx(to_free);
             switch_thread_rwlock_unlock (g_rwlock_f2m);
             if (globals.debug) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n",
                                   g_rwlock_f2m);
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
                                   "release vfs mem file [%p] associate with %s, check deleted [%p]\n",
-                                  tofree, _fullpath, deleted);
+                                  to_free, _fullpath, deleted);
             }
             stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] success.\n", _fullpath);
         } else {

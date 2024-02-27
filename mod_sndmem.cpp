@@ -951,10 +951,10 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
         switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
-    for (int idx = 0; idx < MAX_API_ARGC; idx++) {
-        if (argv[idx]) {
+    for (auto & idx : argv) {
+        if (idx) {
             char *ss[2] = {nullptr, nullptr};
-            int cnt = switch_split(argv[idx], '=', ss);
+            int cnt = switch_split(idx, '=', ss);
             if (cnt == 2) {
                 char *var = ss[0];
                 char *val = ss[1];

@@ -227,7 +227,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	}
 
 	if (map) {
-		context->sfinfo.format |= map->format;
+		context->sfinfo.format |= (int)map->format;
 	}
 
 	if (!strcmp(ext, "raw")) {

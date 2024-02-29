@@ -447,7 +447,7 @@ sf_count_t vfs_tell(sndfile_context *context) {
     return (sf_count_t)context->vfs_funcs->vfs_tell_func(context->vfs_data);
 }
 
-SF_VIRTUAL_IO _sfvirtual = {
+SF_VIRTUAL_IO sg_sf_virtual = {
         reinterpret_cast<sf_vio_get_filelen>(vfs_get_filelen),
         reinterpret_cast<sf_vio_seek>(vfs_seek),
         reinterpret_cast<sf_vio_read>(vfs_read),
@@ -480,7 +480,7 @@ sndfile_perform_open(sndfile_context *context, const char *path, int mode, switc
         return SWITCH_STATUS_FALSE;
     }
 
-    if ((context->handle = sf_open_virtual(&_sfvirtual, mode, &context->sfinfo, context)) == nullptr) {
+    if ((context->handle = sf_open_virtual(&sg_sf_virtual, mode, &context->sfinfo, context)) == nullptr) {
         return SWITCH_STATUS_FALSE;
 	}
 

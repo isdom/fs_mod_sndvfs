@@ -932,7 +932,7 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
     }
 
     switch_status_t status = SWITCH_STATUS_SUCCESS;
-    char *_fullpath = nullptr;
+    char *_full_path = nullptr;
 
     switch_memory_pool_t *pool;
     switch_core_new_memory_pool(&pool);
@@ -962,14 +962,14 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "process arg: %s = %s\n", var, val);
                 }
                 if (!strcasecmp(var, "fullpath")) {
-                    _fullpath = val;
+                    _full_path = val;
                     continue;
                 }
             }
         }
     }
 
-    if (!_fullpath) {
+    if (!_full_path) {
         stream->write_function(stream, "fullpath is required.\n");
         switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
@@ -979,9 +979,9 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
         }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
-        auto to_free = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _fullpath);
+        auto to_free = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _full_path);
         if (to_free) {
-            auto deleted = switch_core_hash_delete(g_fullpath2memfile, _fullpath);
+            auto deleted = switch_core_hash_delete(g_fullpath2memfile, _full_path);
             // has free inside switch_core_hash_delete by hashtable_destructor_t(to_free)
             // release_mem_ctx(to_free);
             switch_thread_rwlock_unlock (g_rwlock_f2m);
@@ -990,18 +990,18 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
                                   g_rwlock_f2m);
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
                                   "release vfs mem file [%p] associate with %s, check deleted [%p]\n",
-                                  to_free, _fullpath, deleted);
+                                  to_free, _full_path, deleted);
             }
-            stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] success.\n", _fullpath);
+            stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] success.\n", _full_path);
         } else {
             switch_thread_rwlock_unlock (g_rwlock_f2m);
             if (globals.debug) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n",
                                   g_rwlock_f2m);
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
-                                  "can't found vfs mem file associate with %s\n", _fullpath);
+                                  "can't found vfs mem file associate with %s\n", _full_path);
             }
-            stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] failed.\n", _fullpath);
+            stream->write_function(stream, "free_vfs_mem_file: free mem file [%s] failed.\n", _full_path);
         }
     }
 

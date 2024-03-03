@@ -556,21 +556,21 @@ static switch_status_t sndfile_file_read(switch_file_handle_t *handle, void *dat
 
 static switch_status_t sndfile_file_write(switch_file_handle_t *handle, void *data, size_t *len)
 {
-	size_t inlen = *len;
+	size_t in_len = *len;
 	auto *context = (sndfile_context *)handle->private_info;
 
 	if (switch_test_flag(handle, SWITCH_FILE_DATA_RAW)) {
-		*len = (size_t) sf_write_raw(context->handle, data, (sf_count_t)inlen);
+		*len = (size_t) sf_write_raw(context->handle, data, (sf_count_t)in_len);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_INT)) {
-		*len = (size_t) sf_writef_int(context->handle, (int *) data, (sf_count_t)inlen);
+		*len = (size_t) sf_writef_int(context->handle, (int *) data, (sf_count_t)in_len);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_SHORT)) {
-		*len = (size_t) sf_writef_short(context->handle, (short *) data, (sf_count_t)inlen);
+		*len = (size_t) sf_writef_short(context->handle, (short *) data, (sf_count_t)in_len);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_FLOAT)) {
-		*len = (size_t) sf_writef_float(context->handle, (float *) data, (sf_count_t)inlen);
+		*len = (size_t) sf_writef_float(context->handle, (float *) data, (sf_count_t)in_len);
 	} else if (switch_test_flag(handle, SWITCH_FILE_DATA_DOUBLE)) {
-		*len = (size_t) sf_writef_double(context->handle, (double *) data, (sf_count_t)inlen);
+		*len = (size_t) sf_writef_double(context->handle, (double *) data, (sf_count_t)in_len);
 	} else {
-		*len = (size_t) sf_writef_int(context->handle, (int *) data, (sf_count_t)inlen);
+		*len = (size_t) sf_writef_int(context->handle, (int *) data, (sf_count_t)in_len);
 	}
 
 	handle->sample_count += *len;

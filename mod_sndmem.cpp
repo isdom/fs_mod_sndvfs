@@ -814,7 +814,7 @@ const static switch_state_handler_table_t vfs_mem_cs_handlers = {
         0
 };
 
-#define FREEVFSMEMFILE_SYNTAX "fullpath=<path>"
+#define FREE_VFS_MEM_FILE_SYNTAX "fullpath=<path>"
 SWITCH_STANDARD_API(free_vfs_mem_file_function);
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
@@ -872,7 +872,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
     switch_core_hash_init(&g_fullpath2memfile);
     switch_thread_rwlock_create(&g_rwlock_f2m, pool);
 
-    SWITCH_ADD_API(commands_api_interface, "free_vfs_mem_file", "free vfs mem file", free_vfs_mem_file_function, FREEVFSMEMFILE_SYNTAX);
+    SWITCH_ADD_API(commands_api_interface, "free_vfs_mem_file", "free vfs mem file", free_vfs_mem_file_function, FREE_VFS_MEM_FILE_SYNTAX);
 
     /* indicate that the module should continue to be loaded */
 	return SWITCH_STATUS_SUCCESS;

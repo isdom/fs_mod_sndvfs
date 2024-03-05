@@ -108,7 +108,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	const char *ext;
 	struct format_map *map = nullptr;
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
-	char *alt_path = nullptr, *last, *ldup = nullptr;
+	char *alt_path = nullptr, *last, *l_dup = nullptr;
 	size_t alt_len = 0;
 	int rates[4] = { 8000, 16000, 32000, 48000 };
 	int i;
@@ -359,9 +359,9 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 			last++;
 		}
 #endif
-		ldup = strdup(last);
-		switch_assert(ldup);
-		switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", handle->samplerate, SWITCH_PATH_SEPARATOR, ldup);
+		l_dup = strdup(last);
+		switch_assert(l_dup);
+		switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", handle->samplerate, SWITCH_PATH_SEPARATOR, l_dup);
 		if (sndfile_perform_open(context, alt_path, mode, handle) == SWITCH_STATUS_SUCCESS) {
 			path = alt_path;
 		} else {
@@ -369,7 +369,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 			   If we don't find any, we will default back to the original file name.
 			 */
 			for (i = 3; i >= 0; i--) {
-				switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", rates[i], SWITCH_PATH_SEPARATOR, ldup);
+				switch_snprintf(last, alt_len - (last - alt_path), "%d%s%s", rates[i], SWITCH_PATH_SEPARATOR, l_dup);
 				if (sndfile_perform_open(context, alt_path, mode, handle) == SWITCH_STATUS_SUCCESS) {
 					path = alt_path;
 					break;
@@ -422,7 +422,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
   end:
 
 	switch_safe_free(alt_path);
-	switch_safe_free(ldup);
+	switch_safe_free(l_dup);
 
 	return status;
 }

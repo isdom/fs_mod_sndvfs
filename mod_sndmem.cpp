@@ -768,7 +768,7 @@ SWITCH_STANDARD_API(mod_sndmem_debug)
 	return SWITCH_STATUS_SUCCESS;
 }
 
-switch_hash_t  *g_fullpath2memfile;
+switch_hash_t  *g_full_path_mem_file;
 switch_thread_rwlock_t *g_rwlock_f2m;
 
 static switch_status_t vfs_mem_on_channel_init(switch_core_session_t *session);
@@ -869,7 +869,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
     // register vfs_mem state handlers
     switch_core_add_state_handler(&vfs_mem_cs_handlers);
 
-    switch_core_hash_init(&g_fullpath2memfile);
+    switch_core_hash_init(&g_full_path_mem_file);
     switch_thread_rwlock_create(&g_rwlock_f2m, pool);
 
     SWITCH_ADD_API(commands_api_interface, "free_vfs_mem_file", "free vfs mem file", free_vfs_mem_file_function, FREE_VFS_MEM_FILE_SYNTAX);
@@ -880,7 +880,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown) {
     switch_thread_rwlock_destroy(g_rwlock_f2m);
-    switch_core_hash_destroy(&g_fullpath2memfile);
+    switch_core_hash_destroy(&g_full_path_mem_file);
 
     // unregister vfs_mem state handlers
     switch_core_remove_state_handler(&vfs_mem_cs_handlers);
@@ -979,9 +979,9 @@ SWITCH_STANDARD_API(free_vfs_mem_file_function) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before wlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
         }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
-        auto to_free = (vfs_mem_context_t *) switch_core_hash_find(g_fullpath2memfile, _full_path);
+        auto to_free = (vfs_mem_context_t *) switch_core_hash_find(g_full_path_mem_file, _full_path);
         if (to_free) {
-            auto deleted = switch_core_hash_delete(g_fullpath2memfile, _full_path);
+            auto deleted = switch_core_hash_delete(g_full_path_mem_file, _full_path);
             // has free inside switch_core_hash_delete by hashtable_destructor_t(to_free)
             // release_mem_ctx(to_free);
             switch_thread_rwlock_unlock (g_rwlock_f2m);
@@ -1026,7 +1026,7 @@ bool mem_exist_func(const char *path) {
     }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
 
-    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_fullpath2memfile, fullpath);
+    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_full_path_mem_file, fullpath);
 
     switch_thread_rwlock_unlock (g_rwlock_f2m);
     if (globals.debug) {
@@ -1053,7 +1053,7 @@ void *mem_open_func(const char *path) {
     }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
 
-    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_fullpath2memfile, fullpath);
+    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_full_path_mem_file, fullpath);
 
     switch_thread_rwlock_unlock (g_rwlock_f2m);
     if (globals.debug) {
@@ -1096,7 +1096,7 @@ void *mem_open_func(const char *path) {
         }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
 
-        if ( SWITCH_STATUS_SUCCESS == switch_core_hash_insert_destructor(g_fullpath2memfile, fullpath, mem_ctx,
+        if ( SWITCH_STATUS_SUCCESS == switch_core_hash_insert_destructor(g_full_path_mem_file, fullpath, mem_ctx,
                                                                          reinterpret_cast<hashtable_destructor_t>(release_mem_ctx))) {
             if (globals.debug) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile %s create success: [%p]\n", fullpath,

@@ -75,7 +75,7 @@ struct format_map {
 };
 
 struct sndfile_context {
-	SF_INFO sfinfo;
+	SF_INFO sf_info;
 	SNDFILE *handle;
     void *vfs_data;
     vfs_func_t *vfs_funcs;
@@ -217,126 +217,126 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	map = static_cast<format_map *>(switch_core_hash_find(globals.format_hash, ext));
 
 	if (mode & SFM_WRITE) {
-		context->sfinfo.channels = (int)handle->channels;
-		context->sfinfo.samplerate = (int)handle->samplerate;
+		context->sf_info.channels = (int)handle->channels;
+		context->sf_info.samplerate = (int)handle->samplerate;
 		if (handle->samplerate == 8000 || handle->samplerate == 16000 ||
 			handle->samplerate == 24000 || handle->samplerate == 32000 || handle->samplerate == 48000 ||
 			handle->samplerate == 11025 || handle->samplerate == 22050 || handle->samplerate == 44100) {
-			context->sfinfo.format |= SF_FORMAT_PCM_16;
+			context->sf_info.format |= SF_FORMAT_PCM_16;
 		}
 	}
 
 	if (map) {
-		context->sfinfo.format |= (int)map->format;
+		context->sf_info.format |= (int)map->format;
 	}
 
 	if (!strcmp(ext, "raw")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 8000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 8000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "r8")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 8000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 8000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "r16")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 16000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 16000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "r24")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_24;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_PCM_24;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 24000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 24000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "r32")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_32;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_PCM_32;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 32000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 32000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "gsm")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_GSM610;
-		context->sfinfo.channels = 1;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_GSM610;
+		context->sf_info.channels = 1;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.samplerate = 8000;
 	} else if (!strcmp(ext, "ul") || !strcmp(ext, "ulaw")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_ULAW;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_ULAW;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 8000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 8000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "al") || !strcmp(ext, "alaw")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_ALAW;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_ALAW;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = 8000;
-			context->sfinfo.channels = 1;
+			context->sf_info.samplerate = 8000;
+			context->sf_info.channels = 1;
 		}
 	} else if (!strcmp(ext, "vox")) {
-		context->sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_VOX_ADPCM;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.format = SF_FORMAT_RAW | SF_FORMAT_VOX_ADPCM;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 8000;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	} else if (!strcmp(ext, "adpcm")) {
-		context->sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_IMA_ADPCM;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.format = SF_FORMAT_WAV | SF_FORMAT_IMA_ADPCM;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 8000;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	} else if (!strcmp(ext, "oga") || !strcmp(ext, "ogg")) {
-		context->sfinfo.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
+		context->sf_info.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
 		if (mode & SFM_READ) {
-			context->sfinfo.samplerate = (int)handle->samplerate;
+			context->sf_info.samplerate = (int)handle->samplerate;
 		}
 	} else if (!strcmp(ext, "wve")) {
-		context->sfinfo.format = SF_FORMAT_WVE | SF_FORMAT_ALAW;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.format = SF_FORMAT_WVE | SF_FORMAT_ALAW;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 8000;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	} else if (!strcmp(ext, "htk")) {
-		context->sfinfo.format = SF_FORMAT_HTK | SF_FORMAT_PCM_16;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.format = SF_FORMAT_HTK | SF_FORMAT_PCM_16;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 8000;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	} else if (!strcmp(ext, "iff")) {
-		context->sfinfo.format = SF_FORMAT_AIFF | SF_FORMAT_PCM_16;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.format = SF_FORMAT_AIFF | SF_FORMAT_PCM_16;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 8000;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	} else if (!strcmp(ext, "xi")) {
-		context->sfinfo.format = SF_FORMAT_XI | SF_FORMAT_DPCM_16;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 44100;
+		context->sf_info.format = SF_FORMAT_XI | SF_FORMAT_DPCM_16;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 44100;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	} else if (!strcmp(ext, "sds")) {
-		context->sfinfo.format = SF_FORMAT_SDS | SF_FORMAT_PCM_16;
-		context->sfinfo.channels = 1;
-		context->sfinfo.samplerate = 8000;
+		context->sf_info.format = SF_FORMAT_SDS | SF_FORMAT_PCM_16;
+		context->sf_info.channels = 1;
+		context->sf_info.samplerate = 8000;
 		if (mode & SFM_WRITE) {
 			reverse_channel_count(handle);
 		}
 	}
 
-	if ((mode & SFM_WRITE) && sf_format_check(&context->sfinfo) == 0) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error : file format is invalid (0x%08X).\n", context->sfinfo.format);
+	if ((mode & SFM_WRITE) && sf_format_check(&context->sf_info) == 0) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error : file format is invalid (0x%08X).\n", context->sf_info.format);
 		return SWITCH_STATUS_GENERR;
 	}
 
@@ -387,15 +387,15 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		}
 	}
 	if (globals.debug) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
-				"Opening File [%s] rate [%dhz] channels: [%d]\n", path, context->sfinfo.samplerate, (uint8_t) context->sfinfo.channels);
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+                          "Opening File [%s] rate [%dhz] channels: [%d]\n", path, context->sf_info.samplerate, (uint8_t) context->sf_info.channels);
 	}
-	handle->samples = (unsigned int) context->sfinfo.frames;
-	handle->samplerate = context->sfinfo.samplerate;
-	handle->channels = (uint8_t) context->sfinfo.channels;
-	handle->format = context->sfinfo.format;
-	handle->sections = context->sfinfo.sections;
-	handle->seekable = context->sfinfo.seekable;
+	handle->samples = (unsigned int) context->sf_info.frames;
+	handle->samplerate = context->sf_info.samplerate;
+	handle->channels = (uint8_t) context->sf_info.channels;
+	handle->format = context->sf_info.format;
+	handle->sections = context->sf_info.sections;
+	handle->seekable = context->sf_info.seekable;
 	handle->speed = 0;
 	handle->private_info = context;
 
@@ -474,13 +474,13 @@ sndfile_perform_open(sndfile_context *context, const char *path, int mode, switc
 	}
 
     // TBD: replace with sf_open_virtual
-	// if ((context->handle = sf_open(path, mode, &context->sfinfo)) == 0) {
+	// if ((context->handle = sf_open(path, mode, &context->sf_info)) == 0) {
     context->vfs_data = context->vfs_funcs->vfs_open_func(path);
     if (!context->vfs_data) {
         return SWITCH_STATUS_FALSE;
     }
 
-    if ((context->handle = sf_open_virtual(&sg_sf_virtual, mode, &context->sfinfo, context)) == nullptr) {
+    if ((context->handle = sf_open_virtual(&sg_sf_virtual, mode, &context->sf_info, context)) == nullptr) {
         return SWITCH_STATUS_FALSE;
 	}
 
@@ -652,7 +652,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	sf_command(nullptr, SFC_GET_FORMAT_MAJOR_COUNT, &major_count, sizeof(int));
 	sf_command(nullptr, SFC_GET_FORMAT_SUBTYPE_COUNT, &subtype_count, sizeof(int));
 
-	//sfinfo.channels = 1;
+	//sf_info.channels = 1;
 	len = (int)((major_count + (ex_len + 2) + 1) * sizeof(char *));
 	supported_formats = (const char **)switch_core_alloc(pool, len);
 
@@ -719,9 +719,9 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 			info.format = s;
 			sf_command(nullptr, SFC_GET_FORMAT_SUBTYPE, &info, sizeof(info));
 			format = (format & SF_FORMAT_TYPEMASK) | info.format;
-			//sfinfo.format = format;
+			//sf_info.format = format;
 			/*
-			   if (sf_format_check(&sfinfo)) {
+			   if (sf_format_check(&sf_info)) {
 			   switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_DEBUG, "   %s\n", info.name);
 			   }
 			 */

@@ -1038,22 +1038,22 @@ bool mem_exist_func(const char *path) {
 }
 
 void *mem_open_func(const char *path) {
-    const char *lbraces = strchr(path, '{');
+    const char *l_braces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
-    if (!lbraces || !rbraces) {
+    if (!l_braces || !rbraces) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {?=?}\n");
         return nullptr;
     }
-    char *vars = strndup(lbraces + 1, rbraces - lbraces - 1);
-    char *fullpath = strdup(rbraces + 1);
+    char *vars = strndup(l_braces + 1, rbraces - l_braces - 1);
+    char *full_path = strdup(rbraces + 1);
 
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, fullpath);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, full_path);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
     }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
 
-    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_full_path_mem_file, fullpath);
+    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_full_path_mem_file, full_path);
 
     switch_thread_rwlock_unlock (g_rwlock_f2m);
     if (globals.debug) {
@@ -1063,10 +1063,10 @@ void *mem_open_func(const char *path) {
 
         if (globals.debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) exist as [%p].\n",
-                              fullpath, org);
+                              full_path, org);
         }
         free(vars);
-        free(fullpath);
+        free(full_path);
 
         mem_seek_func(0, SEEK_SET, org);
         if (globals.debug) {
@@ -1078,14 +1078,14 @@ void *mem_open_func(const char *path) {
     } else {
         if (globals.debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) !NOT! exist, create new one.\n",
-                              fullpath);
+                              full_path);
         }
         auto mem_ctx = (vfs_mem_context_t*)malloc(sizeof(vfs_mem_context_t));
         memset(mem_ctx, 0, sizeof(vfs_mem_context_t));
 
         // TBD: vars & path need free
         mem_ctx->vars = vars;
-        mem_ctx->full_path = fullpath;
+        mem_ctx->full_path = full_path;
 
         // 重新创建一个内存池，第二个参数是NULL，表示没有继承其它内存池。
         aos_pool_create(&mem_ctx->aos_pool, nullptr);
@@ -1096,15 +1096,15 @@ void *mem_open_func(const char *path) {
         }
         switch_thread_rwlock_wrlock( g_rwlock_f2m);
 
-        if ( SWITCH_STATUS_SUCCESS == switch_core_hash_insert_destructor(g_full_path_mem_file, fullpath, mem_ctx,
+        if ( SWITCH_STATUS_SUCCESS == switch_core_hash_insert_destructor(g_full_path_mem_file, full_path, mem_ctx,
                                                                          reinterpret_cast<hashtable_destructor_t>(release_mem_ctx))) {
             if (globals.debug) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile %s create success: [%p]\n", fullpath,
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile %s create success: [%p]\n", full_path,
                                   mem_ctx);
             }
         } else {
             if (globals.debug) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile %s create failed\n", fullpath);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile %s create failed\n", full_path);
             }
         }
 

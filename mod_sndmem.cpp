@@ -749,11 +749,11 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 	return SWITCH_STATUS_SUCCESS;
 }
 
-#define SNDFILE_DEBUG_SYNTAX "<on|off>"
+#define SND_FILE_DEBUG_SYNTAX "<on|off>"
 SWITCH_STANDARD_API(mod_sndmem_debug)
 {
 		if (zstr(cmd)) {
-			stream->write_function(stream, "-USAGE: %s\n", SNDFILE_DEBUG_SYNTAX);
+			stream->write_function(stream, "-USAGE: %s\n", SND_FILE_DEBUG_SYNTAX);
 		} else {
 			if (!strcasecmp(cmd, "on")) {
 				globals.debug = 1;
@@ -762,7 +762,7 @@ SWITCH_STANDARD_API(mod_sndmem_debug)
 				globals.debug = 0;
 				stream->write_function(stream, "Sndmem Debug: off\n");
 			} else {
-				stream->write_function(stream, "-USAGE: %s\n", SNDFILE_DEBUG_SYNTAX);
+				stream->write_function(stream, "-USAGE: %s\n", SND_FILE_DEBUG_SYNTAX);
 			}
 		}
 	return SWITCH_STATUS_SUCCESS;
@@ -861,7 +861,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sndmem_load) {
 	file_interface->file_set_string = sndfile_file_set_string;
 	file_interface->file_get_string = sndfile_file_get_string;
 
-	SWITCH_ADD_API(commands_api_interface, "sndmem_debug", "Set sndmem debug", mod_sndmem_debug, SNDFILE_DEBUG_SYNTAX);
+	SWITCH_ADD_API(commands_api_interface, "sndmem_debug", "Set sndmem debug", mod_sndmem_debug, SND_FILE_DEBUG_SYNTAX);
 
 	switch_console_set_complete("add sndmem_debug on");
 	switch_console_set_complete("add sndmem_debug off");

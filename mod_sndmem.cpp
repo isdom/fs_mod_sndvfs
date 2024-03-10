@@ -1013,27 +1013,27 @@ end:
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx);
 
 bool mem_exist_func(const char *path) {
-    const char *lbraces = strchr(path, '{');
+    const char *l_braces = strchr(path, '{');
     const char *rbraces = strchr(path, '}');
-    if (!lbraces || !rbraces) {
+    if (!l_braces || !rbraces) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {?=?}\n");
         return false;
     }
-    char *fullpath = strdup(rbraces + 1);
+    char *full_path = strdup(rbraces + 1);
 
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
     }
     switch_thread_rwlock_rdlock( g_rwlock_f2m);
 
-    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_full_path_mem_file, fullpath);
+    auto org = (vfs_mem_context_t*)switch_core_hash_find(g_full_path_mem_file, full_path);
 
     switch_thread_rwlock_unlock (g_rwlock_f2m);
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after unlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);
     }
 
-    free(fullpath);
+    free(full_path);
     return org != nullptr;
 }
 

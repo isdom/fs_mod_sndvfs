@@ -1039,13 +1039,13 @@ bool mem_exist_func(const char *path) {
 
 void *mem_open_func(const char *path) {
     const char *l_braces = strchr(path, '{');
-    const char *rbraces = strchr(path, '}');
-    if (!l_braces || !rbraces) {
+    const char *r_braces = strchr(path, '}');
+    if (!l_braces || !r_braces) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {?=?}\n");
         return nullptr;
     }
-    char *vars = strndup(l_braces + 1, rbraces - l_braces - 1);
-    char *full_path = strdup(rbraces + 1);
+    char *vars = strndup(l_braces + 1, r_braces - l_braces - 1);
+    char *full_path = strdup(r_braces + 1);
 
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s, fullpath: %s\n", vars, full_path);

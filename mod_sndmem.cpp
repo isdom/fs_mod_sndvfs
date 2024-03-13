@@ -1014,12 +1014,12 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx);
 
 bool mem_exist_func(const char *path) {
     const char *l_braces = strchr(path, '{');
-    const char *rbraces = strchr(path, '}');
-    if (!l_braces || !rbraces) {
+    const char *r_braces = strchr(path, '}');
+    if (!l_braces || !r_braces) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {?=?}\n");
         return false;
     }
-    char *full_path = strdup(rbraces + 1);
+    char *full_path = strdup(r_braces + 1);
 
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before rlock g_rwlock_f2m [%p]\n", g_rwlock_f2m);

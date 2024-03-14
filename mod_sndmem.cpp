@@ -119,14 +119,14 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	char ps = '/';
 #endif
     const char *l_braces = strchr(path, '{');
-    const char *rbraces = strchr(path, '}');
+    const char *r_braces = strchr(path, '}');
 
-    if (!l_braces || !rbraces) {
+    if (!l_braces || !r_braces) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Missing Variables: {vfs=?,uuid=?}\n");
         return SWITCH_STATUS_GENERR;
     }
 
-    char *vars = switch_core_strndup(handle->memory_pool, l_braces + 1, rbraces - l_braces - 1);
+    char *vars = switch_core_strndup(handle->memory_pool, l_braces + 1, r_braces - l_braces - 1);
 
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vars: %s\n", vars);

@@ -54,7 +54,7 @@ typedef struct {
     vfs_exist_func_t vfs_exist_func;
     vfs_open_func_t vfs_open_func;
     vfs_close_func_t vfs_close_func;
-    vfs_get_filelen_func_t vfs_get_filelen_func;
+    vfs_get_filelen_func_t vfs_get_file_len_func;
     vfs_seek_func_t vfs_seek_func;
     vfs_read_func_t vfs_read_func;
     vfs_write_func_t vfs_write_func;
@@ -428,7 +428,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 }
 
 sf_count_t vfs_get_filelen(sndfile_context *context) {
-    return (sf_count_t)context->vfs_funcs->vfs_get_filelen_func(context->vfs_data);
+    return (sf_count_t)context->vfs_funcs->vfs_get_file_len_func(context->vfs_data);
 }
 
 sf_count_t vfs_seek(sf_count_t offset, int whence, sndfile_context *context) {

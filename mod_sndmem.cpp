@@ -427,7 +427,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	return status;
 }
 
-sf_count_t vfs_get_filelen(sndfile_context *context) {
+sf_count_t vfs_get_file_len(sndfile_context *context) {
     return (sf_count_t)context->vfs_funcs->vfs_get_file_len_func(context->vfs_data);
 }
 
@@ -448,7 +448,7 @@ sf_count_t vfs_tell(sndfile_context *context) {
 }
 
 SF_VIRTUAL_IO sg_sf_virtual = {
-        reinterpret_cast<sf_vio_get_filelen>(vfs_get_filelen),
+        reinterpret_cast<sf_vio_get_filelen>(vfs_get_file_len),
         reinterpret_cast<sf_vio_seek>(vfs_seek),
         reinterpret_cast<sf_vio_read>(vfs_read),
         reinterpret_cast<sf_vio_write>(vfs_write),

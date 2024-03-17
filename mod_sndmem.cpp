@@ -1132,9 +1132,9 @@ void mem_close_func(vfs_mem_context_t *mem_ctx) {
     */
 }
 
-size_t mem_get_filelen_func(vfs_mem_context_t *mem_ctx) {
+size_t mem_get_file_len_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_get_filelen_func: %s -> %zu\n", mem_ctx->full_path,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_get_file_len_func: %s -> %zu\n", mem_ctx->full_path,
                           mem_ctx->length);
     }
     return mem_ctx->length;
@@ -1267,7 +1267,7 @@ static const vfs_func_t g_vfs_mem_funcs = {
         mem_exist_func,
         mem_open_func,
         reinterpret_cast<vfs_close_func_t>(mem_close_func),
-        reinterpret_cast<vfs_get_filelen_func_t>(mem_get_filelen_func),
+        reinterpret_cast<vfs_get_filelen_func_t>(mem_get_file_len_func),
         reinterpret_cast<vfs_seek_func_t>(mem_seek_func),
         reinterpret_cast<vfs_read_func_t>(mem_read_func),
         reinterpret_cast<vfs_write_func_t>(mem_write_func),

@@ -44,7 +44,7 @@ typedef bool (*vfs_exist_func_t) (const char *path);
 typedef void *(*vfs_open_func_t) (const char *path);
 typedef void (*vfs_close_func_t) (void *user_data);
 
-typedef size_t (*vfs_get_filelen_func_t) (void *user_data);
+typedef size_t (*vfs_get_file_len_func_t) (void *user_data);
 typedef size_t (*vfs_seek_func_t) (size_t offset, int whence, void *user_data);
 typedef size_t (*vfs_read_func_t) (void *ptr, size_t count, void *user_data);
 typedef size_t (*vfs_write_func_t) (const void *ptr, size_t count, void *user_data);
@@ -54,7 +54,7 @@ typedef struct {
     vfs_exist_func_t vfs_exist_func;
     vfs_open_func_t vfs_open_func;
     vfs_close_func_t vfs_close_func;
-    vfs_get_filelen_func_t vfs_get_file_len_func;
+    vfs_get_file_len_func_t vfs_get_file_len_func;
     vfs_seek_func_t vfs_seek_func;
     vfs_read_func_t vfs_read_func;
     vfs_write_func_t vfs_write_func;
@@ -1267,7 +1267,7 @@ static const vfs_func_t g_vfs_mem_funcs = {
         mem_exist_func,
         mem_open_func,
         reinterpret_cast<vfs_close_func_t>(mem_close_func),
-        reinterpret_cast<vfs_get_filelen_func_t>(mem_get_file_len_func),
+        reinterpret_cast<vfs_get_file_len_func_t>(mem_get_file_len_func),
         reinterpret_cast<vfs_seek_func_t>(mem_seek_func),
         reinterpret_cast<vfs_read_func_t>(mem_read_func),
         reinterpret_cast<vfs_write_func_t>(mem_write_func),

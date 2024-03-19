@@ -617,8 +617,7 @@ static switch_bool_t exten_is_allowed(const char *exten) {
 static const char **supported_formats;
 
 void dump_formats(const char *fmt) {
-    int i;
-    for (i = 0; supported_formats[i]; i++) {
+    for (int i = 0; supported_formats[i]; i++) {
         switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_NOTICE, fmt, i, supported_formats[i]);
     }
 }

@@ -70,7 +70,7 @@ static struct {
 
 struct format_map {
 	char *ext;
-	char *uext;
+	char *u_ext;
 	uint32_t format;
 };
 
@@ -676,7 +676,7 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 			switch_assert(map);
 
 			map->ext = switch_core_strdup(pool, info.extension);
-			map->uext = switch_core_strdup(pool, info.extension);
+			map->u_ext = switch_core_strdup(pool, info.extension);
 			map->format = info.format;
 			if (map->ext) {
 				for (p = map->ext; *p; p++) {
@@ -684,11 +684,11 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 				}
 				switch_core_hash_insert(globals.format_hash, map->ext, map);
 			}
-			if (map->uext) {
-				for (p = map->uext; *p; p++) {
+			if (map->u_ext) {
+				for (p = map->u_ext; *p; p++) {
 					*p = (char) switch_toupper(*p);
 				}
-				switch_core_hash_insert(globals.format_hash, map->uext, map);
+				switch_core_hash_insert(globals.format_hash, map->u_ext, map);
 			}
             // skip extension for temp isdom
 			// supported_formats[len++] = (char *) info.extension;
@@ -700,13 +700,13 @@ static switch_status_t setup_formats(switch_memory_pool_t *pool)
 					switch_assert(map);
 
 					map->ext = switch_core_strdup(pool, add_ext[i].new_ext);
-					map->uext = switch_core_strdup(pool, add_ext[i].new_ext); 
+					map->u_ext = switch_core_strdup(pool, add_ext[i].new_ext);
 					map->format = info.format;
 					switch_core_hash_insert(globals.format_hash, map->ext, map);
-					for (p = map->uext; *p; p++) {
+					for (p = map->u_ext; *p; p++) {
 						*p = (char) switch_toupper(*p);
 					}
-					switch_core_hash_insert(globals.format_hash, map->uext, map);
+					switch_core_hash_insert(globals.format_hash, map->u_ext, map);
 
 					switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_INFO, "%s  (extension \"%s\")\n", info.name, add_ext[i].new_ext);
 				}

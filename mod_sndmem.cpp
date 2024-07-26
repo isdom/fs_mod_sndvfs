@@ -1217,7 +1217,7 @@ void add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
 
 size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_write_func: %s -> current pos: %zu, read size: %ld\n", mem_ctx->full_path,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_write_func: %s -> current pos: %zu, write size: %ld\n", mem_ctx->full_path,
                           mem_ctx->position, count);
     }
     size_t write_size;

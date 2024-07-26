@@ -1120,20 +1120,13 @@ void *mem_open_func(const char *path) {
 
 void mem_close_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_close_func: %s\n", mem_ctx->full_path);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_close_func: %s\n", mem_ctx->full_path);
     }
-    /*
-    if (APR_SUCCESS != switch_queue_trypush(g_ossvfs_to_upload, oss_ctx)) {
-        // then destroy oss_ctx
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "oss_close_func: switch_queue_trypush failed.\n");
-        release_oss_context(mem_ctx);
-    }
-    */
 }
 
 size_t mem_get_file_len_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_get_file_len_func: %s -> %zu\n", mem_ctx->full_path,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_get_file_len_func: %s -> %zu\n", mem_ctx->full_path,
                           mem_ctx->length);
     }
     return mem_ctx->length;
@@ -1141,8 +1134,8 @@ size_t mem_get_file_len_func(vfs_mem_context_t *mem_ctx) {
 
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_seek_func: %s -> whence:%d:%zu\n",
-                          mem_ctx->full_path, whence, offset);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_seek_func: %s -> current pos: %zu, whence:%d:%zu\n",
+                          mem_ctx->full_path, mem_ctx->position, whence, offset);
     }
     size_t seek_from_start;
     switch(whence) {
@@ -1160,7 +1153,8 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
             return mem_ctx->position;
     }
     if (seek_from_start < 0 || seek_from_start > mem_ctx->length) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mem_seek_func: invalid offset: %zu\n", seek_from_start);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mem_seek_func: invalid offset: %zu when memfile len is: %zu\n",
+                          seek_from_start, mem_ctx->length);
         return mem_ctx->position;
     }
     mem_ctx->position = seek_from_start;
@@ -1182,8 +1176,8 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
 
 size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_read_func: %s -> %ld\n", mem_ctx->full_path,
-                          count);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_read_func: %s -> current pos: %zu, read size: %ld\n", mem_ctx->full_path,
+                          mem_ctx->position, count);
     }
     size_t read_size;
     size_t bytes = 0;
@@ -1223,8 +1217,8 @@ void add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
 
 size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_write_func: %s -> %ld\n", mem_ctx->full_path,
-                          count);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_write_func: %s -> current pos: %zu, read size: %ld\n", mem_ctx->full_path,
+                          mem_ctx->position, count);
     }
     size_t write_size;
     size_t bytes = 0;
@@ -1256,7 +1250,7 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
 
 size_t mem_tell_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_tell_func: %s -> %zu\n", mem_ctx->full_path,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mem_tell_func: %s -> current pos: %zu\n", mem_ctx->full_path,
                           mem_ctx->position);
     }
     return mem_ctx->position;

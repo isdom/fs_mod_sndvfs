@@ -50,9 +50,6 @@ typedef size_t (*vfs_read_func_t) (void *ptr, size_t count, void *user_data);
 typedef size_t (*vfs_write_func_t) (const void *ptr, size_t count, void *user_data);
 typedef size_t (*vfs_tell_func_t) (void *user_data);
 
-typedef void (*vfs_append_func_t) (const void *ptr, size_t count, void *user_data);
-typedef void (*vfs_stream_completed_func_t) (void *user_data);
-
 typedef struct {
     vfs_exist_func_t vfs_exist_func;
     vfs_open_func_t vfs_open_func;
@@ -63,6 +60,9 @@ typedef struct {
     vfs_write_func_t vfs_write_func;
     vfs_tell_func_t vfs_tell_func;
 } vfs_func_t;
+
+typedef void (*vfs_append_func_t) (const void *ptr, size_t count, void *user_data);
+typedef void (*vfs_stream_completed_func_t) (void *user_data);
 
 typedef struct {
     vfs_func_t vfs_funcs;
@@ -1356,6 +1356,9 @@ void mem_append_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) 
 }
 
 void mem_stream_completed_func(vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_stream_completed_func: %s\n", mem_ctx->full_path);
+    }
     switch_mutex_lock(mem_ctx->lock);
     mem_ctx->streaming = false;
     switch_mutex_unlock(mem_ctx->lock);

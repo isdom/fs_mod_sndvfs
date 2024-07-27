@@ -425,6 +425,8 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	switch_safe_free(alt_path);
 	switch_safe_free(l_dup);
 
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "at the end of sndfile_file_open: [%s]\n", path);
+
 	return status;
 }
 

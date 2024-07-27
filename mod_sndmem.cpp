@@ -1140,10 +1140,11 @@ void mem_close_func(vfs_mem_context_t *mem_ctx) {
 
 size_t mem_get_file_len_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_get_file_len_func: %s -> %zu\n", mem_ctx->full_path,
-                          mem_ctx->length);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_get_file_len_func: %s -> %zu, while sizeof(size_t): %lu , sizeof(sf_count_t): %lu\n",
+                          mem_ctx->full_path, mem_ctx->length, sizeof(size_t), sizeof(sf_count_t));
     }
     return mem_ctx->length;
+    // return SF_COUNT_MAX;
 }
 
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {

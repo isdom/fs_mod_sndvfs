@@ -395,7 +395,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	handle->channels = (uint8_t) context->sf_info.channels;
 	handle->format = context->sf_info.format;
 	handle->sections = context->sf_info.sections;
-	handle->seekable = context->sf_info.seekable;
+	handle->seekable = 0; // context->sf_info.seekable;
 	handle->speed = 0;
 	handle->private_info = context;
 

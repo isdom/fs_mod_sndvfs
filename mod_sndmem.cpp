@@ -416,6 +416,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		sf_command(context->handle, SFC_FILE_TRUNCATE, &frames, sizeof(frames));
 	}
 
+#if 0  // disable sf_command with SFC_SET_SCALE_FLOAT_INT_READ for skip pre-read all content for snd file 20240727 by maming
 	/*
 		http://www.mega-nerd.com/libsndfile/api.html#note2
 	 */
@@ -423,6 +424,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before sf_command(context->handle,  SFC_SET_SCALE_FLOAT_INT_READ, nullptr, SF_TRUE): [%s]\n", path);
 		sf_command(context->handle,  SFC_SET_SCALE_FLOAT_INT_READ, nullptr, SF_TRUE);
 	}
+#endif
 
   end:
 

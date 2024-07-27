@@ -482,9 +482,9 @@ sndfile_perform_open(snd_file_context *context, const char *path, int mode, swit
     }
 
     if ((context->handle = sf_open_virtual(&sg_sf_virtual, mode, &context->sf_info, context)) == nullptr) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after sf_open_virtual: [%s], mode: [%d]\n", path, mode);
         return SWITCH_STATUS_FALSE;
 	}
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "after sf_open_virtual: [%s], mode: [%d]\n", path, mode);
 
 	return SWITCH_STATUS_SUCCESS;
 }

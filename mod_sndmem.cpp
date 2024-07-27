@@ -1245,7 +1245,7 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
         // wait for append data
         switch_mutex_unlock(mem_ctx->lock);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_read_func: %s -> wait for more data\n", mem_ctx->full_path);
-        switch_yield(1000 * 10);  // wait for 10 million seconds
+        switch_yield(1000 * 500);  // wait for 500 million seconds
         switch_mutex_lock(mem_ctx->lock);
     }
 

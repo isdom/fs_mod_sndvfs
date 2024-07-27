@@ -406,10 +406,13 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 	}
 
 	if (switch_test_flag(handle, SWITCH_FILE_WRITE_APPEND)) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before sf_seek(context->handle, frames, SEEK_END): [%s]\n", path);
 		handle->pos = sf_seek(context->handle, frames, SEEK_END);
 	} else if (switch_test_flag(handle, SWITCH_FILE_WRITE_OVER)) {
-		handle->pos = sf_seek(context->handle, frames, SEEK_SET);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before sf_seek(context->handle, frames, SEEK_SET): [%s]\n", path);
+        handle->pos = sf_seek(context->handle, frames, SEEK_SET);
 	} else {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before sf_command(context->handle, SFC_FILE_TRUNCATE, &frames, sizeof(frames)): [%s]\n", path);
 		sf_command(context->handle, SFC_FILE_TRUNCATE, &frames, sizeof(frames));
 	}
 
@@ -417,6 +420,7 @@ static switch_status_t sndfile_file_open(switch_file_handle_t *handle, const cha
 		http://www.mega-nerd.com/libsndfile/api.html#note2
 	 */
 	if (switch_test_flag(handle, SWITCH_FILE_DATA_SHORT)) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "before sf_command(context->handle,  SFC_SET_SCALE_FLOAT_INT_READ, nullptr, SF_TRUE): [%s]\n", path);
 		sf_command(context->handle,  SFC_SET_SCALE_FLOAT_INT_READ, nullptr, SF_TRUE);
 	}
 

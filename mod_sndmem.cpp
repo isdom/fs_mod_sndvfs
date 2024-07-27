@@ -50,6 +50,9 @@ typedef size_t (*vfs_read_func_t) (void *ptr, size_t count, void *user_data);
 typedef size_t (*vfs_write_func_t) (const void *ptr, size_t count, void *user_data);
 typedef size_t (*vfs_tell_func_t) (void *user_data);
 
+typedef void (*vfs_append_func_t) (const void *ptr, size_t count, void *user_data);
+typedef void (*vfs_stream_completed_func_t) (void *user_data);
+
 typedef struct {
     vfs_exist_func_t vfs_exist_func;
     vfs_open_func_t vfs_open_func;
@@ -60,6 +63,12 @@ typedef struct {
     vfs_write_func_t vfs_write_func;
     vfs_tell_func_t vfs_tell_func;
 } vfs_func_t;
+
+typedef struct {
+    vfs_func_t vfs_funcs;
+    vfs_append_func_t vfs_append_func;
+    vfs_stream_completed_func_t vfs_stream_completed_func;
+} vfs_ext_func_t;
 
 static struct {
 	switch_hash_t *format_hash;
@@ -902,6 +911,10 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_sndmem_shutdown) {
 // ============================================= vfs in memory =============================================
 
 typedef struct {
+    switch_memory_pool_t *fs_pool;
+    switch_mutex_t *lock;
+    bool streaming;
+
     // TBD: 'vars' need free for strndup
     char *vars;
     // TBD: 'object' need free for strdup
@@ -923,7 +936,9 @@ void release_mem_ctx(vfs_mem_context_t *mem_ctx) {
         aos_pool_destroy(mem_ctx->aos_pool);
         free(mem_ctx->vars);
         free(mem_ctx->full_path);
-        free(mem_ctx);
+        // free(mem_ctx);
+        switch_mutex_destroy(mem_ctx->lock);
+        switch_core_destroy_memory_pool(&mem_ctx->fs_pool);
     }
     if (globals.debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "release_mem_ctx end for [%p]\n", mem_ctx);
@@ -1093,9 +1108,25 @@ void *mem_open_func(const char *path) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "memfile (%s) !NOT! exist, create new one.\n",
                               full_path);
         }
-        auto mem_ctx = (vfs_mem_context_t*)malloc(sizeof(vfs_mem_context_t));
-        memset(mem_ctx, 0, sizeof(vfs_mem_context_t));
 
+        switch_memory_pool_t *pool = nullptr;
+        if (SWITCH_STATUS_SUCCESS != switch_core_new_memory_pool(&pool)) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile (%s) create failed bcs of switch_core_new_memory_pool.\n",
+                              full_path);
+            return nullptr;
+        }
+
+        auto mem_ctx = (vfs_mem_context_t*)switch_core_alloc(pool, sizeof(vfs_mem_context_t));
+        mem_ctx->fs_pool = pool;
+
+        if (SWITCH_STATUS_SUCCESS != switch_mutex_init(&mem_ctx->lock, SWITCH_MUTEX_NESTED, mem_ctx->fs_pool)) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "memfile (%s) create failed bcs of switch_mutex_init.\n",
+                              full_path);
+            switch_core_destroy_memory_pool(&pool);
+            return nullptr;
+        }
+
+        mem_ctx->streaming = true;
         // TBD: vars & path need free
         mem_ctx->vars = vars;
         mem_ctx->full_path = full_path;
@@ -1140,11 +1171,10 @@ void mem_close_func(vfs_mem_context_t *mem_ctx) {
 
 size_t mem_get_file_len_func(vfs_mem_context_t *mem_ctx) {
     if (globals.debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_get_file_len_func: %s -> %zu, while sizeof(size_t): %lu , sizeof(sf_count_t): %lu\n",
-                          mem_ctx->full_path, mem_ctx->length, sizeof(size_t), sizeof(sf_count_t));
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_get_file_len_func: %s -> %zu, while streaming: %d\n",
+                          mem_ctx->full_path, mem_ctx->length, mem_ctx->streaming);
     }
-    return mem_ctx->length;
-    // return SF_COUNT_MAX;
+    return mem_ctx->streaming ? SF_COUNT_MAX : mem_ctx->length;
 }
 
 size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
@@ -1152,6 +1182,8 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_seek_func: %s -> current pos: %zu, whence:%d:%zu\n",
                           mem_ctx->full_path, mem_ctx->position, whence, offset);
     }
+
+    switch_mutex_lock(mem_ctx->lock);
     size_t seek_from_start;
     switch(whence) {
         case SEEK_SET:
@@ -1165,19 +1197,22 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
             break;
         default:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "mem_seek_func: invalid whence: %d\n", whence);
-            return mem_ctx->position;
+            size_t pos = mem_ctx->position;
+            switch_mutex_unlock(mem_ctx->lock);
+            return pos;
     }
     if (!is_position_valid(mem_ctx, seek_from_start)) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "mem_seek_func: invalid offset: %zu while memfile len is: %zu. adjust current position value and !NOT! sync real buf pos\n",
                           seek_from_start, mem_ctx->length);
         mem_ctx->position = seek_from_start;
-        return mem_ctx->position;
+        switch_mutex_unlock(mem_ctx->lock);
+        return seek_from_start;
     }
 
     mem_ctx->position = seek_from_start;
 
     aos_buf_t *b;
-    int64_t pos = 0;
+    size_t pos = 0;
     aos_list_for_each_entry(aos_buf_t, b, &mem_ctx->buffer, node) {
         int len = aos_buf_size(b);
         if (pos + len >= seek_from_start) {
@@ -1188,7 +1223,9 @@ size_t mem_seek_func(size_t offset, int whence, vfs_mem_context_t *mem_ctx) {
             pos += len;
         }
     }
-    return mem_ctx->position;
+    pos = mem_ctx->position;
+    switch_mutex_unlock(mem_ctx->lock);
+    return pos;
 }
 
 size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
@@ -1196,10 +1233,20 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_read_func: %s -> current pos: %zu, read size: %ld\n", mem_ctx->full_path,
                           mem_ctx->position, count);
     }
+    switch_mutex_lock(mem_ctx->lock);
     if (!is_position_valid(mem_ctx, mem_ctx->position)) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "mem_read_func: invalid offset: %zu while memfile len is: %zu. !NOT! read any bytes\n",
                           mem_ctx->position, mem_ctx->length);
+        switch_mutex_unlock(mem_ctx->lock);
         return 0;
+    }
+
+    while (mem_ctx->streaming && mem_ctx->position + count > mem_ctx->length) {
+        // wait for append data
+        switch_mutex_unlock(mem_ctx->lock);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mem_read_func: %s -> wait for more data\n", mem_ctx->full_path);
+        switch_yield(1000 * 10);  // wait for 10 million seconds
+        switch_mutex_lock(mem_ctx->lock);
     }
 
     size_t read_size;
@@ -1209,6 +1256,7 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
         read_size = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
         if (read_size == 0 && count > bytes) {
             if (mem_ctx->position >= mem_ctx->length) {
+                switch_mutex_unlock(mem_ctx->lock);
                 return bytes;
             } else {
                 mem_ctx->cur_buf = aos_list_entry(mem_ctx->cur_buf->node.next, aos_buf_t, node);
@@ -1218,6 +1266,7 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
         }
         read_size = aos_min(count - bytes, read_size);
         if (read_size == 0) {
+            switch_mutex_unlock(mem_ctx->lock);
             return bytes;
         }
         memcpy((uint8_t*)ptr + bytes, mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, read_size);
@@ -1227,15 +1276,12 @@ size_t mem_read_func(void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     }
 }
 
-void add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
+aos_buf_t *add_new_buf(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
     aos_buf_t *part = aos_create_buf(mem_ctx->aos_pool, (int)count);
     memcpy(part->pos, ptr, count);
     part->last += count;
     aos_list_add_tail(&part->node, &mem_ctx->buffer);
-    mem_ctx->length += count;
-    mem_ctx->position = mem_ctx->length;
-    mem_ctx->cur_buf = part;
-    mem_ctx->cur_buf_pos = count;
+    return part;
 }
 
 size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
@@ -1243,9 +1289,11 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_write_func: %s -> current pos: %zu, write size: %ld\n", mem_ctx->full_path,
                           mem_ctx->position, count);
     }
+    switch_mutex_lock(mem_ctx->lock);
     if (!is_position_valid(mem_ctx, mem_ctx->position)) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "mem_write_func: invalid offset: %zu while memfile len is: %zu. !NOT! write any bytes\n",
                           mem_ctx->position, mem_ctx->length);
+        switch_mutex_unlock(mem_ctx->lock);
         return 0;
     }
 
@@ -1255,10 +1303,16 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
     while (true) {
         write_size = mem_ctx->cur_buf ? aos_buf_size(mem_ctx->cur_buf) - mem_ctx->cur_buf_pos : 0;
         if (write_size == 0 && count > bytes) {
-            // if (&oss_ctx->cur_buf->node == &oss_ctx->buffer) {
             if (mem_ctx->position >= mem_ctx->length) {
-                add_new_buf((uint8_t*)ptr + bytes, count - bytes, mem_ctx);
+                size_t left = count - bytes;
+                aos_buf_t *part = add_new_buf((uint8_t*)ptr + bytes, left, mem_ctx);
+                mem_ctx->length += left;
+                mem_ctx->position = mem_ctx->length;
+                mem_ctx->cur_buf = part;
+                mem_ctx->cur_buf_pos = left;
+
                 bytes = count;
+                switch_mutex_unlock(mem_ctx->lock);
                 return bytes;
             } else {
                 mem_ctx->cur_buf = aos_list_entry(mem_ctx->cur_buf->node.next, aos_buf_t, node);
@@ -1268,6 +1322,7 @@ size_t mem_write_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx)
         }
         write_size = aos_min(count - bytes, write_size);
         if (write_size == 0) {
+            switch_mutex_unlock(mem_ctx->lock);
             return bytes;
         }
         memcpy(mem_ctx->cur_buf->start + mem_ctx->cur_buf_pos, (uint8_t*)ptr + bytes, write_size);
@@ -1282,7 +1337,28 @@ size_t mem_tell_func(vfs_mem_context_t *mem_ctx) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_tell_func: %s -> current pos: %zu while memfile len is: %zu\n", mem_ctx->full_path,
                           mem_ctx->position, mem_ctx->length);
     }
-    return mem_ctx->position;
+    switch_mutex_lock(mem_ctx->lock);
+    size_t pos = mem_ctx->position;
+    switch_mutex_unlock(mem_ctx->lock);
+    return pos;
+}
+
+void mem_append_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) {
+    if (globals.debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "mem_append_func: %s -> current length: %zu, append size: %ld\n", mem_ctx->full_path,
+                          mem_ctx->length, count);
+    }
+
+    switch_mutex_lock(mem_ctx->lock);
+    add_new_buf((uint8_t*)ptr, count, mem_ctx);
+    mem_ctx->length += count;
+    switch_mutex_unlock(mem_ctx->lock);
+}
+
+void mem_stream_completed_func(vfs_mem_context_t *mem_ctx) {
+    switch_mutex_lock(mem_ctx->lock);
+    mem_ctx->streaming = false;
+    switch_mutex_unlock(mem_ctx->lock);
 }
 
 static const vfs_func_t g_vfs_mem_funcs = {
@@ -1296,9 +1372,22 @@ static const vfs_func_t g_vfs_mem_funcs = {
         reinterpret_cast<vfs_tell_func_t>(mem_tell_func)
 };
 
+static const vfs_ext_func_t g_vfs_ext_mem_funcs = {
+        mem_exist_func,
+        mem_open_func,
+        reinterpret_cast<vfs_close_func_t>(mem_close_func),
+        reinterpret_cast<vfs_get_file_len_func_t>(mem_get_file_len_func),
+        reinterpret_cast<vfs_seek_func_t>(mem_seek_func),
+        reinterpret_cast<vfs_read_func_t>(mem_read_func),
+        reinterpret_cast<vfs_write_func_t>(mem_write_func),
+        reinterpret_cast<vfs_tell_func_t>(mem_tell_func),
+        reinterpret_cast<vfs_append_func_t>(mem_append_func),
+        reinterpret_cast<vfs_stream_completed_func_t>(mem_stream_completed_func)
+};
+
 static switch_status_t vfs_mem_on_channel_init(switch_core_session_t *session) {
     switch_channel_t *channel = switch_core_session_get_channel(session);
-    switch_channel_set_private(channel, "vfs_mem", &g_vfs_mem_funcs);
+    switch_channel_set_private(channel, "vfs_mem", &g_vfs_ext_mem_funcs);
     return SWITCH_STATUS_SUCCESS;
 }
 

@@ -1350,8 +1350,13 @@ void mem_append_func(const void *ptr, size_t count, vfs_mem_context_t *mem_ctx) 
     }
 
     switch_mutex_lock(mem_ctx->lock);
-    add_new_buf((uint8_t*)ptr, count, mem_ctx);
+    aos_buf_t *part = add_new_buf((uint8_t*)ptr, count, mem_ctx);
     mem_ctx->length += count;
+    if (!mem_ctx->cur_buf) {
+        // first append to empty mem_file, in this case, mem_ctx->cur_buf !NOT! yet init
+        mem_ctx->cur_buf = part;
+        mem_ctx->cur_buf_pos = 0;
+    }
     switch_mutex_unlock(mem_ctx->lock);
 }
 
